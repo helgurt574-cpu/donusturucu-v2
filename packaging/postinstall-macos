@@ -1,0 +1,22 @@
+#!/bin/sh
+# Runs as root after the .pkg copied Dönüştürücü.app. It never fails the installation:
+# if the runtime cannot be built here, the app builds it on first launch instead.
+APP="$2/Applications/Donusturucu.app/Contents/Resources/app"
+[ -d "$APP" ] || APP="/Applications/Donusturucu.app/Contents/Resources/app"
+LOG="$APP/installation.log"
+exec >>"$LOG" 2>&1
+echo "== $(date) Dönüştürücü (@PLATFORM@) kurulumu"
+for tool in "$APP/tools/ffmpeg" "$APP/tools/ffprobe" "$APP/micromamba"; do
+  codesign -v "$tool" 2>/dev/null || codesign --force --sign - "$tool"
+done
+xattr -dr com.apple.quarantine "/Applications/Donusturucu.app" 2>/dev/null || true
+if /bin/bash "$APP/setup-runtime.sh" "$APP" "$APP/runtime"; then
+  chmod -R a+rX "$APP"
+  echo 'Tüm işlevler deneniyor.'
+  "$APP/runtime/bin/python" -B "$APP/launch.py" --self-test "$APP/installation-test.json" || echo 'UYARI: bazı testler başarısız.'
+else
+  echo 'UYARI: yerel motor kurulumda hazırlanamadı; ilk açılışta yeniden denenecek.'
+  rm -rf "$APP/runtime"
+fi
+chmod -R a+rX "$APP" 2>/dev/null
+exit 0

@@ -1,0 +1,64 @@
+DÖNÜŞTÜR 1.6.0 — LINUX / WINDOWS / macOS
+
+Çalışma sırasında indirme veya internet API'si kullanılmaz. Dönüşümler yereldir.
+Üç sistem aynı core.py motorunu, Türkçe ve Kurmancî çevirileri kullanır.
+Linux'ta GTK, Windows/macOS'ta standart Python/Tk arayüzü kullanılır.
+GTK bulunmayan Linux'ta da Tk ile çalıştırılabilir: python3 baslat.py --portable-ui
+
+KAYNAKTAN ÇALIŞTIRMA
+Python 3.10+ ve Tk gereklidir. Windows: baslat-windows.bat
+macOS: baslat-macos.command  / Linux: baslat.sh
+Mac'te python.org dağıtımının Tk içeren Python sürümü kullanılabilir.
+
+GEREKLİ YEREL ARAÇLAR
+- Tam LibreOffice kurulumu (program, share, uno vb. dizinler birlikte).
+- FFmpeg ve ffprobe.
+- Pandoc.
+- OCR için Tesseract ve eng/tur/kmr/ara/fas dil dosyaları, PDF taraması için pdftoppm.
+  Tam native paket, araçları ve tessdata klasörünü birlikte içermelidir.
+- PDF metin çıkarma: Poppler pdftotext veya paketteki saf Python pypdf.
+Araçlar sistemde kurulu olabilir; uygulama bunları bulur. Alternatif düzen:
+  tools/ffmpeg.exe, tools/ffprobe.exe, tools/pandoc.exe       [Windows]
+  tools/LibreOffice/program/soffice.com                     [Windows]
+  tools/ffmpeg, tools/ffprobe, tools/pandoc                 [macOS/Linux]
+  tools/LibreOffice.app/Contents/MacOS/soffice               [macOS]
+Tam LibreOffice klasörünü/app'ini kopyalayın; yalnız soffice dosyası yeterli değildir.
+DONUSTURUCU_TOOLS ortam değişkeniyle farklı bir yerel klasör belirtilebilir.
+Gerekli araçlar bir kez kurulmuş veya pakete konmuş olmalıdır. Program onları
+çalışma sırasında indirmez. Eksikse açıklayıcı hata verir.
+
+İNTERNETSİZ KURULABİLEN YEREL UYGULAMA PAKETİ ÜRETME
+Windows EXE ve macOS APP/DMG bu Linux bilgisayarda üretilmiş değildir.
+Her paket kendi işletim sisteminde hazırlanmalı ve gerçek dönüşümlerle denenmelidir.
+1. Hedef sistemin mimarisine uygun Python, PyInstaller ve pypdf'yi hazırla.
+   İnternetsiz kurulumda pip --no-index --find-links yerel-wheeller kullanılabilir.
+2. Yukarıdaki araçları ve lisanslarını tools klasöründe veya sistemde hazırla.
+3. Windows: py -3 packaging/build_native.py --tools-dir tools
+   macOS: python3 packaging/build_native.py --tools-dir tools
+4. Betik Python/Tk/pypdf ve yerel motorları uygulama paketine kopyalar.
+5. Oluşan gerçek uygulama ile TXT→PDF→TXT, EPUB→DOCX, WAV→MP3 ve İngilizce/Arapça/Farsça resimler üzerinde OCR ve Farsça DOCX yönü denenir.
+   Test başarısızsa dağıtım arşivi oluşturulmaz. Test raporu JSON olarak kaydedilir.
+6. dist/ altında Windows ZIP (içinde EXE) veya macOS DMG oluşur.
+   Tam paket üretildikten sonra kullanıcının Python/pip veya internet ihtiyacı yoktur.
+
+TEST SINIRI
+Mevcut ortamda yalnız Linux çalıştırma ve arayüz testleri yapılabilir.
+Windows/macOS'ta dosya izinleri, paketleme, Tk, imzalama ve motorların gerçek
+çalışması ayrıca doğrulanmalıdır. Windows/macOS için hazır/test edilmiş EXE
+ve DMG varmış gibi sunulmaz. Apple imzalama/noter ve Windows kod imzalama
+bu yerel derleme betiğinin kapsamı dışındadır.
+
+ÇEVRİMDIŞI ÇALIŞMA
+FFmpeg yalnız file/pipe protokolleriyle çalışır. Pandoc sandbox kullanır.
+LibreOffice'te makrolar ve dış bağlantı güncellemesi kapatılır.
+Linux'ta varsa Bubblewrap ağ ad alanını da kapatır. Windows/macOS'ta
+Bubblewrap yoktur; yerel araçlar kullanılır. Dönüşümler internetsiz denenmelidir.
+
+1.6.0 KONUŞMA MODELİ
+Native paket üretimi artık yerel asr-models/whisper-small modelini ve
+faster-whisper bağımlılıklarını gerektirir. requirements-build.txt hedef işletim
+sisteminin Python ortamına hazırlanmalı; Linux venv başka sisteme kopyalanmaz.
+Model dosyaları mevcut Linux proje klasöründe bulunur; model veri dosyaları
+hedef ortama kopyalanabilir. build_native.py eksik model/motorda durur.
+Native self-test gerçek İngilizce ses örneğinden TXT çıkarılmasını da denetler.
+Bu betiklerin Windows/macOS'ta çalıştırılmış olduğu anlamına gelmez.
