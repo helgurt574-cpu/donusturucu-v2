@@ -1,0 +1,18 @@
+TOPLU DOSYA VE KLASÖR İŞLEMLERİ — 1.6.6 / Android 1.2.0
+
+1. Klasör ekle düğmesine bas; alt klasörlerdeki desteklenen dosyalar da listeye alınır.
+2. Bir dosya seç; çıktı biçimini veya Farklı işlemler bölümündeki işlemi ayarla.
+3. Bütün dosyalara uygula seçeneğini açık tut. Klasör eklediğinde otomatik açılır.
+4. Kayıt klasörünü seç ve işlemi başlat. Aynı ayarlar uygun dosyalara sırayla uygulanır.
+
+Bozuk veya uyumsuz dosyalar ayrıntılarda gösterilir; kalan dosyalar işlenir.
+Durdur dersen tamamlanmış çıktılar kalır. Orijinal dosyalar değiştirilmez.
+Çıktılar tek kayıt klasöründedir. Aynı isimler varsa numara eklenir.
+Birleştirmede seçili dosyanın türüne uygun dosyalar liste sırasıyla birleştirilir.
+Ses ekleme veya altyazı zamanlarını geri yüklemede seçtiğin yardımcı dosya bütün girdiler için aynıdır.
+Klasörün tüm dosyaları her işleme uygun olmayabilir; sonuç sayısı ve hata ayrıntılarını kontrol et.
+
+Android konuşma modeli için en az 4 GB RAM bulunan cihaz ve 1,5 GB boş RAM gerekir. Bellek yetersizse işlem açıklamayla atlanır.
+Android, seçilen dosyaları işlem için uygulama önbelleğine kopyalar; boş depolama gerekir.
+Tarayıcı sürümünde klasör seçme desteği tarayıcıya bağlıdır; Linux paketi yerel sunucu ile çalışır.
+SRT çeviri aktarımı için KULLANIM-ALTYAZI.txt dosyasına bak.

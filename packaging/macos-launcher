@@ -1,0 +1,18 @@
+#!/bin/sh
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../Resources/app" && pwd)
+ok(){ [ -x "$1/bin/python" ] && "$1/bin/python" -c 'import tkinter,faster_whisper' >/dev/null 2>&1; }
+RT="$ROOT/runtime"
+if ! ok "$RT"; then
+  # The installer could not prepare the runtime: build a private copy for this user once.
+  RT="$HOME/Library/Application Support/Donusturucu/runtime"
+  if ! ok "$RT"; then
+    LOG="$HOME/Library/Logs/Donusturucu-kurulum.log"; mkdir -p "$HOME/Library/Logs"
+    osascript -e 'display notification "İlk açılış için yerel motor hazırlanıyor (1–3 dakika)…" with title "Dönüştürücü"' >/dev/null 2>&1
+    if ! /bin/bash "$ROOT/setup-runtime.sh" "$ROOT" "$RT" >>"$LOG" 2>&1; then
+      osascript -e "display dialog \"Dönüştürücü hazırlanamadı.\n\nLütfen şu dosyayı gönderin:\n$LOG\" buttons {\"Tamam\"} default button 1 with icon stop with title \"Dönüştürücü\"" >/dev/null 2>&1
+      exit 1
+    fi
+  fi
+fi
+export DONUSTURUCU_RUNTIME="$RT" PATH="$RT/bin:/usr/bin:/bin:/usr/sbin:/sbin" PYTHONNOUSERSITE=1
+exec "$RT/bin/python" -B "$ROOT/launch.py" "$@"

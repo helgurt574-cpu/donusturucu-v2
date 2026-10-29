@@ -1,0 +1,202 @@
+DÖNÜŞTÜR / VEGUHERÎNER — 1.6.0
+Linux / Windows / macOS • Türkçe ve Kurmancî (Latin)
+
+BAŞLATMA
+Bu bilgisayarda baslat.sh dosyasını çalıştır. Kurulmuş FFmpeg, LibreOffice,
+Poppler ve GTK kullanılır. Linux taşınabilir paketindeki vendor/runtime dizini Pandoc'u sağlar.
+Platform-kaynak ZIP dosyası LibreOffice/FFmpeg/Pandoc motorlarını içermez;
+onların hedef sistemde veya yerel tools klasöründe bulunması gerekir.
+Ubuntu uygulama menüsüne kurmak için: bash kur.sh
+Windows: baslat-windows.bat / macOS: baslat-macos.command
+Windows/macOS başlatıcıları için Python/Tk ve yerel araçlar gereklidir.
+Tam, internetsiz kurulabilen EXE/APP üretimi için packaging/PLATFORMLAR.txt
+dosyasına bak. Windows/macOS paketleri bu Linux makinede üretilmiş değildir.
+Kurulum, eksik bağımlılıkları indirmek için internet isteyebilir. Dosya
+DÖNÜŞTÜRME işlemleri internet istemez. Dönüştürme alt süreçlerinin ağ erişimi
+Linux üzerinde varsa Bubblewrap ile de kapatılır. Windows ve macOS üzerinde
+yerel dönüşüm araçları kullanılır. Hiçbir platformda çevrimiçi dönüşüm API
+hizmetine ihtiyaç yoktur.
+
+KULLANIM
+1. Dosya ekle düğmesiyle bir veya birden fazla dosya seç; Linux GTK arayüzünde sürükle bırak da olur.
+2. Listedeki her dosyayı seç. Uygun çıktı biçimleri otomatik gösterilir.
+3. Video kalitesini, yüksekliğini ve ses bit hızını gerektiğinde seç.
+4. İstersen Yalnızca metin seçeneğiyle görselleri kaldır. Resimlerin içindeki
+   yazılar için OCR kullan seçeneğini aç ve Türkçe/Kurmancî/İngilizce/Arapça/Farsça dilini seç.
+5. Kayıt klasörünü belirle ve Dönüştürmeyi başlat düğmesine bas.
+6. Sonuçları Klasörü aç ile gör. Hatalar İşlem günlüğü bölümündedir.
+Başarıyla tamamlandığında “Dönüştürme işlemi bitti.” bildirimi görünür.
+Hatalı veya durdurulan işlem, başarıyla tamamlandı diye bildirilmez.
+Arayüz dilini sağ üstten Türkçe / Kurmancî olarak değiştir.
+
+ÇIKTI BİÇİMLERİ
+Metin belgeleri: DOCX, DOC, ODT, RTF, TXT, HTML, EPUB, PDF.
+Ek metin biçimleri (Pandoc): Markdown (MD), reStructuredText (RST), FB2.
+Hesap tabloları (16 seçenek): XLSX, XLS, ODS, CSV, TSV, HTML, PDF,
+DOCX, DOC, ODT, RTF, TXT, EPUB, MD, RST, FB2.
+Sunular (14 seçenek): PPTX, PPT, ODP, PDF, DOCX, DOC, ODT, RTF, TXT,
+HTML, EPUB, MD, RST, FB2. Metin biçimleri slayt içeriğini belgeye aktarır.
+Ses: MP3, WAV, FLAC, OGG/Vorbis, OPUS, M4A/AAC, AAC, AIFF, WMA.
+Video: MP4/H.264, MKV/H.264, WebM/VP9, AVI/MPEG-4, MOV/H.264,
+MPEG/MPEG-2, TS/H.264, hareketli GIF.
+Videoda ses kanalı varsa bu ses, ses biçimlerinden birine de çıkarılabilir.
+Ses dosyasından yapay görüntülü video oluşturulmaz.
+
+DOSYA TANIMA
+PDF imzası, OOXML/OpenDocument/EPUB ZIP içeriği, OLE tür bilgisi ve medya
+akışları incelenir. Yalnızca uzantıya güvenilmez. TXT/CSV/TSV/Markdown gibi
+birbirine benzeyen düz metin dosyalarında uzantı da anlamın belirlenmesinde
+kullanılır. Her dosya her biçime dönüştürülemez; kategoriye uygun seçenekler
+sunulur. Yalnızca resim dosyaları bu sürümün kapsamı dışındadır.
+
+SAĞDAN SOLA YAZILAR
+Arapça ve Farsça Unicode metni mantıksal karakter sırasıyla korunur;
+karakterler ters çevrilmez veya görünüş biçimlerine zorla dönüştürülmez.
+DOCX/ODT/HTML/EPUB/PDF için paragraf yönü belirtilir. Farsça yarım boşluk
+(ZWNJ), Arap/Fars rakamları ve karışık Latin metni test edilmiştir. EPUB
+paragraf yönleri ve sağdan sola kitap ilerleme bilgisi ayrıca düzeltilir.
+TXT ve Markdown düzen/biçim bilgisi saklamaz; UTF-8 karakterler korunur ama
+görünüm kullanılan okuyucuya ve yazı tipine bağlıdır. OCR hatasız değildir.
+
+ÖNEMLİ SINIRLAR
+- PDF'den belgeye dönüşüm metin çıkarır, orijinal sayfa düzenini yeniden kurmaz.
+  Taranmış PDF için OCR seçeneğini aç. OCR, Tesseract ve dil dosyalarıyla
+  tamamen çevrimdışı çalışır; doğruluk tarama kalitesine bağlıdır.
+- CSV ve TSV, yalnızca ilk çalışma sayfasını içerir. Formüller, diğer sayfalar
+  ve biçimlendirme korunmaz. Karmaşık hesap tablolarında uygun biçim ODS/XLSX'tir.
+- Sunularda PPT/PPTX/ODP/PDF çıktısı slayt biçimindedir. DOCX/ODT/EPUB/TXT
+  gibi metin çıktıları slayt sırasını, metinleri, tabloları ve desteklenen gömülü
+  PNG/JPEG/GIF/SVG görselleri belgeye aktarır. Slayt yerleşimi, animasyonlar
+  ve konuşmacı notları korunmaz. Görsel yerleşimi değişebilir.
+- Tablo→metin/EPUB çıktıları tüm çalışma sayfalarını başlık ve tablo halinde
+  aktarır; hesaplanmış hücre değerleri kullanılır.
+- HTML çıktısı tek dosya olacak şekilde gömülü görsellerle oluşturulur.
+- Video dönüşümlerinde ilk görüntü ve varsa ilk ses akışı kullanılır;
+  ek sesler ve altyazılar aktarılmaz. GIF sessizdir; kaynak boyutu seçiminde
+  yüksekliği en çok 480p olur. GIF büyük dosyalar üretebilir.
+- Daha yüksek bit hızı/kayıpsız biçim seçmek kaynakta olmayan kaliteyi yaratmaz.
+- Şifreli belgeler ve DRM korumalı e-kitaplar desteklenmez.
+- Orijinal dosyalar değiştirilmez. Aynı adlı çıktı varsa (1), (2) eklenir.
+- Durdur düğmesi sırayı durdurur; başarıyla bitmiş çıktılar korunur.
+- Dönüştürme için hedef diskte yeterli boş alan olmalıdır.
+
+PAKET / ISO
+Ubuntu DEB paketi dist/donusturucu_1.6.0_all.deb içindedir.
+Paket Ubuntu araçlarına bağımlıdır; tek başına bütün LibreOffice/FFmpeg
+paketlerini içermez. Başka bir makinede tamamen internetsiz ilk kurulum için
+bu bağımlılıkların da önceden kurulmuş veya yerel APT deposunda olması gerekir.
+Bu uygulama mevcut Cubic ISO'suna otomatik eklenmemiştir.
+
+FARKLI İŞLEMLER
+Ana ekrandaki Farklı işlemler düğmesi ayrı bir düzenleme penceresi açar.
+Pencereye dosya ekle; yalnız uygun işlemler gösterilir. Sonuçlar yeni dosyalardır.
+Süreler saniye (15,5) veya saat:dakika:saniye (00:01:15.500) yazılabilir.
+Boş bitiş, dosyanın sonudur. Başlangıç bitişten küçük olmalıdır.
+
+Video: seçili aralığı kaydet/çıkar, seçili aralığı eşit sürelerle parçala,
+her dosyanın farklı aralığını birleştir, yalnız seçilen saniyelerde sesi sustur,
+tüm sesi kaldır, seçilen bölümün sesini MP3'e çıkar, belirli saniyeye ses ekle
+veya yalnız hedef aralığın sesini değiştir, saniyeden PNG kare kaydet,
+seçili bölümden GIF üret, seçili bölümü döndür veya aralığın hızını değiştir.
+Ses eklerken video hedef başlangıcı/bitişi ile ses kaynağının başlangıcı/bitişi
+ayrıdır. Fazla ses hedef aralıkta kesilir. Video süresi değişmez; aralık dışındaki
+mevcut ses korunur. Karıştırma yüksek seslerde taşmaya yol açabilir.
+
+Ses: aralık kaydet/çıkar, parçala, birleştir, aralıkta sustur, ses düzeyi/hız,
+yumuşak giriş/çıkış. Hız aralık dışında kalan kısımları korur; toplam süre değişir.
+Birleştirmede dosyaları Yukarı/Aşağı ile sırala. Her dosyayı seç, kendi
+başlangıç/bitişini gir ve Aralığı kaydet'e bas. Liste sırası kullanılır.
+
+Belgeler: parçala/birleştir; çıktı PDF olur. DOCX/ODT gibi kaynaklar önce PDF'e
+aktarılır. Düzenlenebilir DOCX birleştirme sunulmaz. Sayfa aralığı örneği:
+1-3;4-6;7,9 → üç ayrı dosya. Aralık boşsa Her parçada sayfa sayısı kullanılır.
+
+Düzenleme çıktıları: video MP4, ses WAV; ayrıca MP3/PNG/GIF işlemleri açıkça
+belirtilir. Kesme/düzenleme yeniden kodlanır; özgünle birebir veri garantisi yoktur.
+Birleştirme farklı videoları ilk dosyanın boyut/kare hızına uyarlar; sessiz video
+bölümlerine sessizlik eklenir. İlk görüntü ve ilk ses akışı kullanılır.
+
+Ana dönüşüm ekranında video kalitesi/boyutu seçilebilir. Ses bit hızı seçimi yok;
+ses mümkünse kopyalanır, biçim zorunlu kılarsa otomatik dönüştürülür.
+
+TESTLER
+Motorun entegrasyon testleri tests/ dizinindedir. Gerçek FFmpeg/LibreOffice
+çalıştırılır. Güncel kapsam ve sonuçlar TEST-SONUCLARI-1.6.0.txt dosyasındadır.
+Tam biçim taraması: python3 tests/full_matrix.py yeni-test-klasoru
+Medya seçenekleri: python3 tests/media_options.py medya-test yeni-test-klasoru/seeds
+Bu komutlar çalıştırıldıkları gerçek işletim sistemini test eder; diğer sistemler
+için başarı sayılmaz. Çıktılar örnek dosyalarla doğrulanır; her olası kullanıcı
+belgesi için kusursuz görünüm garantisi vermez.
+Sağdan sola yazı testleri dahil dönüşüm/altyapı/OCR testleri, GTK ve Tk durdur düğmesinin 2 kontrast testi,
+her iki arayüzün ayrı gerçek dönüştürme denemeleri Linux üzerinde yapılmıştır.
+Windows/macOS için gerçek sistem testi yapılmamıştır.
+Arayüz ekran görüntüleri assets/ dizinindedir.
+
+ÜÇÜNCÜ TARAF ARAÇLAR
+FFmpeg: https://ffmpeg.org/
+LibreOffice: https://www.libreoffice.org/
+Pandoc 3.1.3 (Ubuntu paketi): https://pandoc.org/
+Pandoc kaynak paketi: https://launchpad.net/ubuntu/+source/pandoc/3.1.3+ds-2
+Poppler: https://poppler.freedesktop.org/
+pypdf (BSD-3-Clause): https://pypdf.readthedocs.io/
+Tesseract OCR ve eng/tur/kmr/ara/fas dil verileri: https://tesseract-ocr.github.io/
+Ubuntu taşınabilir OCR araçları ve lisansları vendor/ocr/ içinde bulunur.
+Ek pypdf lisansı vendor/python/pypdf-*.dist-info/licenses/ altındadır.
+Bubblewrap: https://github.com/containers/bubblewrap
+Taşınabilir klasördeki Pandoc'un telif/lisans metinleri vendor/runtime/usr/share/doc/
+altında bulunur. GPL lisanslarının kopyaları vendor/licenses/ içindedir.
+Kurmancî metinleri gerektiğinde donusturucu/i18n.py üzerinden düzeltilebilir.
+
+1.4.1 ARAYÜZ DÜZENLEMESİ
+İşlemler Video kes / Ses kes, Videodan bölüm sil, Birleştir, Ses ekle,
+Sesi çıkar, Videoyu sessiz yap gibi açık adlarla gösterilir. Her işlemin altında
+kısa açıklama vardır. Dosyayı listeden çıkar yalnız çalışma listesini değiştirir.
+Sırada öne al / Sırada arkaya al düğmeleri yalnız birleştirmede görünür.
+Süreler saat:dakika:saniye gösterilir; sonsuzluk işareti kullanılmaz.
+Zorunlu kesme/silme/susturma alanları doğrudan açılır. Diğer işlemlerde
+Başlangıç ve bitiş zamanı seç işaretlenmezse dosyanın tamamı kullanılır.
+Ses eklerken hedef video zamanı ayrı, ses dosyasından bölüm seçimi ayrıdır.
+Belge parçalamada sayfa sayısı veya sayfa aralıkları ayrı seçilir.
+
+1.5.0 — İŞLEM DÜĞMELERİ
+Farklı işlemler ekranında işlemler solda doğrudan düğmelerdir. Video kes,
+Videodan bölüm sil, Video parçala, Videoları birleştir, Ses ekle, Sesi çıkar,
+Videonun sesini değiştir, Fotoğraf al, GIF, Döndür, Hız gibi işlemlere tıkla.
+Sağ tarafta yalnız seçtiğin işlemin açıklaması, dosyası ve gerekli alanlar açılır.
+Dosya ekle/listeden çıkar bölümü normal işlemlerden kaldırıldı. Birleştirmede
+dosya listesi ve sıralama araçları görünür. Boş işlem günlüğü kapalıdır;
+İşlem ayrıntıları düğmesiyle açılır. Bir dosya seçmeden işlem seçilebilir;
+dosya seçme penceresi o işlem için açılır. Kaynak seçilince uygun işlemler
+gösterilir. Ses ve belge işlemlerinin kapsamı korunmuştur.
+
+1.6.0 — KONUŞMAYI YAZIYA DÖK
+Video veya ses dosyası seç, Farklı işlemler → Konuşmayı yazıya dök.
+Konuşma dilini Türkçe veya English seç. İstersen başlangıç/bitiş zamanı belirle.
+Çıktı UTF-8 TXT metnidir; zaman damgası veya sayfa etiketi eklenmez.
+Whisper small modeli yereldir; ses internete gönderilmez, dönüşüm sırasında
+model indirilmez. Müzik, şiir, gürültü ve belirsiz telaffuz hatalara yol açabilir.
+Metni özellikle çeviri öncesinde gözden geçir. Kürtçe konuşma desteklenmez;
+Kurmancî arayüz dili ile konuşma tanıma dili birbirinden bağımsızdır.
+
+Ubuntu 24.04 amd64 için donusturucu_1.6.0_amd64.deb konuşma motoru ve
+modelini içerir. Diğer dönüşüm motorları paket bağımlılıklarıdır; bunlar da
+önceden kuruluysa uygulama tamamen çevrimdışı çalışır. Paket kurulumu için
+eksik sistem bağımlılıklarının ayrıca hazırlanması gerekir.
+Windows/macOS kaynak kodu ve paketleme betikleri hazırlanmıştır; bu
+sistemlerde gerçek test yapılmamıştır, hazır EXE/DMG teslim edilmemiştir.
+
+1.6.1 — EK VİDEO TESTLERİ VE DÜZELTME
+Tek sayılı en/boy içeren videolar ses ekleme ve susturmada da otomatik olarak
+çift boyuta tamamlanır. Görüntü kenarına en fazla bir piksel eklenir.
+357 ek biçim/işlem/zaman aralığı denemesi başarılıdır. Kaynaklar değişmez.
+
+DENEYSEL WINDOWS / macOS KURULUMLARI
+Windows x64 EXE; macOS 13+ Apple Silicon ve Intel için ayrı PKG hazırlanır.
+Python/Tk, FFmpeg, LibreOffice, Pandoc, Poppler, OCR dilleri ve konuşma
+modeli kurulum dosyasındadır; kurulumda internet gerekmez.
+Kurulum hedef sistemde dönüşüm, OCR, sağdan sola metin ve İngilizce
+konuşma testini çalıştırır. Başarısız testte kurulum başarı bildirmez.
+Bu paketler Linux'ta birleştirilmiştir. Windows/Mac'te çalıştırılmamıştır.
+Paketler imzalı/noter onaylı değildir; gerçek hedef sistem onayı beklenir.
+Windows kurulum alanı kullanıcıya özeldir. Mac /Applications'a kurar.
+En az 6 GB boş alan ayırın; kurulum arşivleri ve yerel motorlar büyüktür.

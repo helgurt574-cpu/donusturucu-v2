@@ -1,0 +1,13 @@
+SRT → TXT → çevrilmiş SRT
+
+1. Konuşmayı yazıya dök bölümünde SRT seçerek altyazı çıkar.
+2. SRT dosyasını dosya listesine ekle. TXT çıktısını seç veya Farklı işlemler → SRT → TXT (çeviri için) kullan.
+3. TXT dosyasını kendi çeviri programında çevir. Her altyazı bölümü tek satırdır. Satır sayısını ve sırasını koru; başlık veya boş satır ekleme. Görsel otomatik satır kaydırma sorun değildir; dosyaya fazladan satır sonu eklenmemeli.
+4. Çevrilmiş TXT'yi Dönüştürücü'ye ekle. Farklı işlemler → Çevrilmiş TXT → SRT seç. Orijinal SRT dosyasını göster ve işlemi başlat.
+5. Yeni SRT'nin sıra numaraları ve zaman kodları orijinal SRT'den alınır. Çeviri veya yeniden zamanlama yapılmaz. Orijinal dosyalar değiştirilmez.
+
+Orijinal SRT'yi sakla. TXT tek başına zaman bilgisi taşımaz. Satır sayıları uyuşmazsa uygulama yeni SRT üretmez; çeviriyi satır satır düzelt.
+UTF-8 Türkçe, Kurmancî, Arapça ve Farsça metin korunur. Ekrandaki yazı biçimi ayrıca oynatıcının yazı tipi ve altyazı desteğine bağlıdır.
+Otomatik konuşma tanımayı dinleyerek kontrol et. Android konuşma SRT zamanları konuşma parçalarına göredir; kelime düzeyinde değildir.
+Bu uygulama metni başka dile çevirmez. Oluşan SRT dosyasını video oynatıcında altyazı olarak açabilirsin.
+TXT'ye aktarılırken SRT'deki birden fazla metin satırı birleştirilir; bu akış özgün satır düzenini veya birebir biçimlendirmeyi korumayı amaçlamaz. Çeviri bölümleri ve zaman kodları korunur.

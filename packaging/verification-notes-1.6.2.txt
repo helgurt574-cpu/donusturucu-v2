@@ -1,0 +1,8 @@
+Verification harness correction:
+Initial verify_cross_162.py stopped with KeyError: text_layout.py while
+reading the Mac payload. 7-Zip automatically opened the nested gzip stream,
+so selecting the outer Donusturucu.pkg/Payload name returned no matching
+entry. Independent bsdtar→gzip→cpio listing confirmed all 14 modules exist.
+The verifier now explicitly opens the outer archive with -txar and compares
+SHA-256 of Python modules inside the actual cpio payload to current sources.
+No installer or product code was changed for this harness correction.
