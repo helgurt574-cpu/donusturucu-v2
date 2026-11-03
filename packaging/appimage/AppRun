@@ -1,0 +1,56 @@
+#!/bin/sh
+# Dönüştürücü AppImage launcher: makes the relocated conda runtime find its own files.
+HERE="$(dirname "$(readlink -f "$0")")"
+E="$HERE/env"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/donusturucu/runtime"
+mkdir -p "$CACHE" 2>/dev/null || CACHE="$(mktemp -d)"
+
+if [ "$1" = "--kur" ] || [ "$1" = "--install" ]; then
+  SELF="${APPIMAGE:-$0}"; DEST="$HOME/Applications"; mkdir -p "$DEST" "$HOME/.local/share/applications" "$HOME/.local/share/icons/hicolor/scalable/apps"
+  cp -f "$SELF" "$DEST/Donusturucu.AppImage" && chmod +x "$DEST/Donusturucu.AppImage"
+  cp -f "$HERE/donusturucu.svg" "$HOME/.local/share/icons/hicolor/scalable/apps/donusturucu.svg"
+  sed "s|^Exec=.*|Exec=\"$DEST/Donusturucu.AppImage\" %F|" "$HERE/donusturucu.desktop" > "$HOME/.local/share/applications/donusturucu.desktop"
+  command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1
+  echo "Dönüştürücü kuruldu: $DEST/Donusturucu.AppImage (uygulama menüsünde görünür)."; exit 0
+fi
+if [ "$1" = "--kaldir" ] || [ "$1" = "--uninstall" ]; then
+  rm -f "$HOME/Applications/Donusturucu.AppImage" "$HOME/.local/share/applications/donusturucu.desktop" "$HOME/.local/share/icons/hicolor/scalable/apps/donusturucu.svg"
+  echo "Dönüştürücü kaldırıldı. Ayarlar: ~/.config/donusturucu"; exit 0
+fi
+
+export PATH="$E/bin:$HERE/app/vendor/tools:$PATH"
+export PYTHONPATH="$HERE/app" PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1
+unset PYTHONHOME
+export GI_TYPELIB_PATH="$E/lib/girepository-1.0"
+export XDG_DATA_DIRS="$E/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+export GSETTINGS_SCHEMA_DIR="$E/share/glib-2.0/schemas"
+export GTK_EXE_PREFIX="$E" GTK_DATA_PREFIX="$E" GTK_PATH="$E/lib/gtk-3.0"
+export TCL_LIBRARY="$E/lib/tcl8.6" TK_LIBRARY="$E/lib/tk8.6"
+export GDK_PIXBUF_MODULEDIR="$E/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+export GDK_PIXBUF_MODULE_FILE="$CACHE/loaders.cache"
+"$E/bin/gdk-pixbuf-query-loaders" > "$GDK_PIXBUF_MODULE_FILE" 2>/dev/null
+export GTK_IM_MODULE_FILE="$CACHE/immodules.cache"
+"$E/bin/gtk-query-immodules-3.0" "$E"/lib/gtk-3.0/3.0.0/immodules/*.so > "$GTK_IM_MODULE_FILE" 2>/dev/null
+cat > "$CACHE/fonts.conf" <<FONTS
+<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+ <dir>/usr/share/fonts</dir><dir>/usr/local/share/fonts</dir><dir prefix="xdg">fonts</dir><dir>~/.fonts</dir>
+ <dir>$E/fonts</dir>
+ <include ignore_missing="yes">$E/etc/fonts/conf.d</include>
+ <cachedir prefix="xdg">fontconfig</cachedir>
+</fontconfig>
+FONTS
+export FONTCONFIG_FILE="$CACHE/fonts.conf"
+export DONUSTURUCU_LIBSECCOMP="$E/lib/libseccomp.so.2"
+# Bundled libraries were built with the build machine's prefix; point them at the bundled data instead.
+# Without the keyboard data GTK aborts on Wayland ("Failed to create XKB keymap").
+export XKB_CONFIG_ROOT="$E/share/X11/xkb"
+export XLOCALEDIR="$E/share/X11/locale"
+export XCURSOR_PATH="${XCURSOR_PATH:-$HOME/.local/share/icons:$HOME/.icons:/usr/share/icons:/usr/share/pixmaps:$E/share/icons}"
+
+APPMODULE=donusturucu.app
+# GTK needs a display server; fall back to the Tk interface when GTK cannot start.
+"$E/bin/python3" -c "import gi;gi.require_version('Gtk','3.0');from gi.repository import Gtk;import sys;sys.exit(0 if Gtk.init_check()[0] else 1)" 2>/dev/null || APPMODULE=donusturucu.portable
+[ "$1" = "--tk" ] && { APPMODULE=donusturucu.portable; shift; }
+[ "$1" = "--selftest" ] && { shift; exec "$E/bin/python3" -m donusturucu.selftest "$@"; }
+exec "$E/bin/python3" -m "$APPMODULE" "$@"
