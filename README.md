@@ -31,7 +31,7 @@ Kurulum ve kullanım için `KULLANIM.txt` dosyasına bakın. Hazır paketler bu 
 
 ## Android 1.4.2
 
-- **Hızlı önizleme** (`QuickView.java`): Dosyalar uygulamasında dokununca seçim listesinde "Önizle" çıkar; fotoğraf (yakınlaştırma, kaydırma), PDF ve Word/ODT/EPUB (sayfa sayfa, kaydırarak geçiş), video, ses ve metin tam ekran açılır. "Dönüştür" dosyayı çalışma alanına aktarır, sonuçların "Aç" düğmesi de bu görüntüleyiciyi kullanır
+- **Hızlı önizleme** (`QuickView.java`): Dosyalar uygulamasında dokununca seçim listesinde "Önizle" çıkar; dosya yöneticisinin üstünde alttan açılan panelde fotoğraf (yakınlaştırma), PDF ve Word/ODT/EPUB (kaydırarak sayfa geçişi), video, ses ve metin gösterilir; dışına dokunmak veya aşağı çekmek kapatır, tam ekran düğmesi var. "Dönüştür" dosyayı çalışma alanına aktarır, sonuçların "Aç" düğmesi de bu görüntüleyiciyi kullanır
 - Yakınlaştırılabilir resim görünümü `Widgets.Zoom`
 
 ## Android 1.4.0
