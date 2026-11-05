@@ -19,4 +19,7 @@ else
   rm -rf "$APP/runtime"
 fi
 chmod -R a+rX "$APP" 2>/dev/null
+# A new icon file name plus re-registering makes Finder and the Dock show the new icon.
+touch "/Applications/Donusturucu.app" 2>/dev/null
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "/Applications/Donusturucu.app" 2>/dev/null || true
 exit 0

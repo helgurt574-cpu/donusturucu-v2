@@ -27,13 +27,19 @@ def start():
   import tkinter as tk
   window=tk.Tk();window.withdraw();window.update();window.destroy()
   from donusturucu.portable import Window
+  from donusturucu import webapp,jobs,studio_ops
   print('STARTUP_OK',sys.version,flush=True)
  elif '--self-test' in sys.argv:
   from donusturucu import selftest
   args=sys.argv[sys.argv.index('--self-test')+1:]
   raise SystemExit(selftest.main(args[:1]))
- else:
+ elif '--tk' in sys.argv:
+  sys.argv.remove('--tk')
   from donusturucu.portable import main
+  main()
+ else:
+  # New interface: a local page in an app window (same design as Android and Linux).
+  from donusturucu.webapp import main
   main()
 try:start()
 except Exception:

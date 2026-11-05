@@ -1,15 +1,15 @@
 [Desktop Entry]
 Type=Application
-Name=Dönüştür
-Name[tr]=Dönüştür
+Name=Dönüştürücü
+Name[tr]=Dönüştürücü
 Name[ku]=Veguherîner
 GenericName=Çevrimdışı dosya dönüştürücü
 GenericName[ku]=Veguherînera pelan a bê înternetê
-Comment=Belge, e-kitap, ses ve videoları bilgisayarında dönüştür
+Comment=Belge, fotoğraf, ses ve videoları bilgisayarında dönüştür, önizle, filigran sil
 Comment[ku]=Belge, pirtûkên elektronîk, deng û vîdyoyan li ser kompîutera xwe biguherîne
 Exec=donusturucu %F
 Icon=donusturucu
 Terminal=false
 Categories=Utility;FileTools;
-MimeType=application/pdf;application/msword;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.oasis.opendocument.text;application/epub+zip;application/rtf;text/plain;text/markdown;text/html;text/csv;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.oasis.opendocument.spreadsheet;application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.oasis.opendocument.presentation;audio/mpeg;audio/x-wav;audio/flac;audio/ogg;audio/mp4;video/mp4;video/x-matroska;video/webm;video/quicktime;
+MimeType=application/pdf;application/msword;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.oasis.opendocument.text;application/epub+zip;application/rtf;text/plain;text/markdown;text/html;text/csv;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.oasis.opendocument.spreadsheet;application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.oasis.opendocument.presentation;audio/mpeg;audio/x-wav;audio/flac;audio/ogg;audio/mp4;video/mp4;video/x-matroska;video/webm;video/quicktime;image/png;image/jpeg;image/webp;image/bmp;image/tiff;application/x-subrip;audio/x-flac;audio/aac;audio/x-m4a;video/x-msvideo;video/mpeg;
 StartupNotify=true
