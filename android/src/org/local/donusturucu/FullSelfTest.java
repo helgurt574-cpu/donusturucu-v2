@@ -13,6 +13,7 @@ final class FullSelfTest {
  static String expected(String action,String format,String inputExt,boolean video,boolean speechSrt){
   if(action.equals("convert")||action.equals("ocr"))return format;if(action.equals("subtitle_text"))return "txt";if(action.equals("subtitle_restore"))return "srt";
   if(action.equals("transcribe"))return speechSrt?"srt":"txt";if(action.equals("extract"))return "mp3";if(action.equals("frame"))return "png";if(action.equals("gif"))return "gif";
+  if(action.equals("merge")&&Arrays.asList("png","jpg","jpeg","webp").contains(inputExt))return "pdf";
   if(inputExt.equals("pdf"))return "pdf";return video?"mp4":inputExt;}
  static String nameExt(File f){String n=f.getName();return n.substring(n.lastIndexOf('.')+1).toLowerCase(Locale.ROOT);}
  static void run(final MainActivity a)throws Exception{
@@ -52,7 +53,7 @@ final class FullSelfTest {
     rows.put(row);FeatureSelfTest.write(root,rows);if(found==null)continue;entry=found;}
    for(String[] act:MainActivity.offeredActions(entry.info,entry.ext)){String action=act[0];
     List<String[]> variants=new ArrayList<String[]>();// {format, rich, speechSrt, subtitleMode}
-    if(action.equals("convert")||action.equals("ocr")){for(String f:MainActivity.formatValues(entry.info,entry.ext)){String fl=f.toLowerCase(Locale.ROOT);variants.add(new String[]{fl,"0","0",""});
+    if(action.equals("convert")||action.equals("ocr")){for(String f:action.equals("ocr")?new String[]{"PDF","TXT","DOCX","ODT","RTF","EPUB","MD","HTML"}:MainActivity.formatValues(entry.info,entry.ext)){String fl=f.toLowerCase(Locale.ROOT);variants.add(new String[]{fl,"0","0",""});
       if(action.equals("convert")&&entry.info==null&&Arrays.asList("pdf","docx","odt","epub","html").contains(fl)&&!entry.ext.equals("srt"))variants.add(new String[]{fl,"1","0",""});}}
     else if(action.equals("transcribe")){variants.add(new String[]{"pdf","0","0",""});variants.add(new String[]{"pdf","0","1",""});}
     else if(action.equals("subtitle")){variants.add(new String[]{"burn","0","0",""});variants.add(new String[]{"soft","0","0",""});}
@@ -64,12 +65,14 @@ final class FullSelfTest {
       j.start=action.equals("frame")?1:entry.info!=null?1:0;j.end=entry.info!=null&&!action.equals("frame")?2.5:-1;j.part=1.5;j.factor=action.equals("rotate")?90:action.equals("volume")?0.5:1.5;
       if(Arrays.asList("convert","extract","mute","subtitle","merge").contains(action)){j.start=0;j.end=-1;}
       if(action.equals("transcribe")){j.start=0;j.end=-1;}
+      if(Arrays.asList("watermark","denoise","compress").contains(action)){j.start=0;j.end=-1;}
+      if(action.equals("watermark"))j.opts.put("regions","0.1,0.1,0.3,0.2");
       MainActivity.ListedFile partner=null;
       if(action.equals("merge"))partner=entry;if(action.equals("add")||action.equals("replace"))partner=speechEntry;if(action.equals("subtitle"))partner=srtEntry;if(action.equals("subtitle_restore"))partner=srtEntry;
       a.useOther(partner);j.other=partner==null?null:partner.file;j.otherInfo=partner==null?null:partner.info;
       List<File> outputs=a.produce(entry,j,action,v[0],v[1].equals("1"),1,"en",v[2].equals("1"),"eng",speechEngine,out);
       if(outputs==null||outputs.isEmpty())throw new IOException("çıktı yok");
-      String want=expected(action,v[0],entry.info!=null?nameExt(input):entry.ext,entry.info!=null&&entry.info.video,v[2].equals("1"));StringBuilder names=new StringBuilder();
+      String want=expected(action,v[0],entry.info!=null||entry.ext.equals("image")?nameExt(input):entry.ext,entry.info!=null&&entry.info.video,v[2].equals("1"));StringBuilder names=new StringBuilder();
       for(File f:outputs){if(!f.isFile()||f.length()==0)throw new IOException("boş çıktı: "+f.getName());if(!f.getName().toLowerCase(Locale.ROOT).endsWith("."+want))throw new IOException("beklenen ."+want+", çıkan "+f.getName());names.append(f.getName()).append(' ');}
       row.put("pass",true);row.put("detail",names.toString().trim());
      }catch(Throwable e){

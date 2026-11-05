@@ -5,10 +5,15 @@ import java.util.*;
 /** Local FFmpeg plans shared by Android and host integration tests. */
 public final class MediaEngine {
  public interface Host {void run(List<String> args) throws Exception;void check() throws Exception;}
- public static final class Info {public boolean video,audio;public double duration,fps=25;public int width,height;}
+ public static final class Info {public boolean video,audio;public double duration,fps=25;public int width,height,rotation;
+  /** Frame size as players show it (phone videos store portrait as rotated landscape). */
+  public int shownWidth(){return rotation%180==0?width:height;}public int shownHeight(){return rotation%180==0?height:width;}}
  public static final class Job {
   public String action="convert",format="mp4",quality="original";
   public File source,other;public Info info,otherInfo;public double start=0,end=-1,part=60,factor=1,audioStart=0,audioEnd=-1;
+  /** Options of the newer tools: regions, mode, level, cleaning flags, size. */
+  public Map<String,String> opts=new HashMap<String,String>();
+  public String opt(String key,String fallback){String v=opts.get(key);return v==null||v.length()==0?fallback:v;}
  }
  private final Host host;private final File work;
  public MediaEngine(Host host,File work){this.host=host;this.work=work;work.mkdirs();}
@@ -32,7 +37,7 @@ public final class MediaEngine {
   for(File f:files)w.write("file '"+f.getName()+"'\n");w.close();File out=new File(work,name+(video?".mp4":".wav"));
   ff(list("-f","concat","-safe","1","-protocol_whitelist","file,pipe","-i",manifest.getAbsolutePath(),"-c","copy",out.getAbsolutePath()));return out;
  }
- public static Job copy(Job source){Job j=new Job();j.source=source.source;j.other=source.other;j.info=source.info;j.otherInfo=source.otherInfo;j.action=source.action;j.format=source.format;j.quality=source.quality;j.start=source.start;j.end=source.end;j.part=source.part;j.factor=source.factor;j.audioStart=source.audioStart;j.audioEnd=source.audioEnd;return j;}
+ public static Job copy(Job source){Job j=new Job();j.source=source.source;j.other=source.other;j.info=source.info;j.otherInfo=source.otherInfo;j.action=source.action;j.format=source.format;j.quality=source.quality;j.start=source.start;j.end=source.end;j.part=source.part;j.factor=source.factor;j.audioStart=source.audioStart;j.audioEnd=source.audioEnd;j.opts=new HashMap<String,String>(source.opts);return j;}
  public List<File> mergeMany(List<File> sources,List<Info> infos)throws Exception{if(sources.size()<2)throw new IOException("Choose two files");List<File>parts=new ArrayList<File>();Info shape=infos.get(0);for(int i=0;i<sources.size();i++){host.check();if(infos.get(i).video!=shape.video)throw new IOException("Incompatible media");parts.add(clip(sources.get(i),infos.get(i),0,infos.get(i).duration,"batch-"+i,shape.video?shape:null));}return Arrays.asList(join(parts,shape.video,"merged"));}
  /** Audio edits run in WAV; return them in the user's format (MP3 in → MP3 out). */
  public List<File> execute(Job j)throws Exception {
@@ -113,6 +118,25 @@ public final class MediaEngine {
    }
    if(!out.isFile()||out.length()==0)throw new IOException("Empty media output");return Arrays.asList(out);
   }
+  if(action.equals("watermark")){
+   input(a,j.source);a.addAll(list("-map","0:v:0","-map","0:a?"));video(a,j.quality,logoFilter(regions(j.opt("regions","")),j.info.shownWidth(),j.info.shownHeight(),j.opt("mode","fill")));
+   a.add(out.getAbsolutePath());ff(a);return Arrays.asList(out);
+  }
+  if(action.equals("denoise")){
+   if(!j.info.audio)throw new IllegalArgumentException("No audio track");String chain=cleanChain(j);
+   if(!v){input(a,j.source);a.addAll(list("-map","0:a:0","-vn","-af",chain,"-c:a","pcm_s16le","-ar","48000",out.getAbsolutePath()));ff(a);return Arrays.asList(out);}
+   // The picture is copied untouched; only the sound is cleaned.
+   List<String> base=list();input(base,j.source);base.addAll(list("-map","0:v:0","-map","0:a:0","-af",chain,"-c:a","aac","-b:a","192k","-ar","48000"));
+   a=new ArrayList<String>(base);a.addAll(list("-c:v","copy",out.getAbsolutePath()));
+   try{ff(a);}catch(Exception copyFailed){host.check();a=new ArrayList<String>(base);a.addAll(list("-c:v","libx264","-preset","fast","-crf","20","-pix_fmt","yuv420p","-vf","pad=ceil(iw/2)*2:ceil(ih/2)*2",out.getAbsolutePath()));ff(a);}
+   return Arrays.asList(out);
+  }
+  if(action.equals("compress")){
+   int level=Integer.parseInt(j.opt("level","2")),limit=Integer.parseInt(j.opt("height","0"));
+   String scale=limit<=0?"null":"scale=w='if(gt(iw,ih),-2,min(iw,"+limit+"))':h='if(gt(iw,ih),min(ih,"+limit+"),-2)'";
+   input(a,j.source);a.addAll(list("-map","0:v:0","-map","0:a?","-c:v","libx264","-preset","faster","-crf",level==1?"23":level==3?"31":"27","-pix_fmt","yuv420p","-vf",scale+",pad=ceil(iw/2)*2:ceil(ih/2)*2","-c:a","aac","-b:a",level==3?"64k":level==1?"128k":"96k","-movflags","+faststart",out.getAbsolutePath()));ff(a);
+   return Arrays.asList(out);
+  }
   if(action.equals("convert")){
    out=new File(work,"converted."+j.format);input(a,j.source);
    if(Arrays.asList("mp3","wav","flac","ogg","opus","m4a","aac","aiff","wma").contains(j.format)){
@@ -141,6 +165,39 @@ public final class MediaEngine {
   }
   a.add(out.getAbsolutePath());ff(a);return Arrays.asList(out);
  }
+ /** Short piece of a file for previews; video is re-encoded upright, sound becomes WAV. */
+ public File sample(File src,Info info,double start,double length,String name)throws Exception{double s=Math.max(0,Math.min(start,Math.max(0,info.duration-.2)));return clip(src,info,s,Math.min(info.duration,s+length),name,null);}
+ /** One still image of a video, upright, at most maxWidth pixels wide. */
+ public File still(File src,double at,int maxWidth,String name)throws Exception{File out=new File(work,name+".jpg");List<String>a=list("-ss",n(Math.max(0,at)));input(a,src);a.addAll(list("-frames:v","1","-vf","scale='min("+maxWidth+",iw)':-2","-q:v","4",out.getAbsolutePath()));ff(a);if(!out.isFile())throw new IOException("No frame");return out;}
+ /** Picture (PNG/JPG) with the marked areas filled from their surroundings or blurred. */
+ public File cleanPicture(File src,int width,int height,String regions,String mode,String ext)throws Exception{File out=new File(work,"clean."+ext);List<String>a=list();input(a,src);a.addAll(list("-vf",logoFilter(regions(regions),width,height,mode),"-frames:v","1"));if(ext.equals("jpg"))a.addAll(list("-q:v","2"));a.add(out.getAbsolutePath());ff(a);return out;}
+ /** "x,y,w,h;…" with values between 0 and 1, relative to the picture as shown. */
+ public static List<double[]> regions(String text){List<double[]> out=new ArrayList<double[]>();for(String part:text.split(";")){String[]v=part.trim().split(",");if(v.length!=4)continue;double[]r=new double[4];for(int i=0;i<4;i++)r[i]=Math.max(0,Math.min(1,Double.parseDouble(v[i])));if(r[2]>0.002&&r[3]>0.002)out.add(r);}return out;}
+ public static String regionText(List<double[]> regions){StringBuilder b=new StringBuilder();for(double[]r:regions){if(b.length()>0)b.append(';');b.append(String.format(Locale.US,"%.5f,%.5f,%.5f,%.5f",r[0],r[1],r[2],r[3]));}return b.toString();}
+ /** delogo needs a border around the area, so the frame is widened by repeating its edges first. */
+ static String logoFilter(List<double[]> regions,int width,int height,String mode){
+  if(regions.isEmpty())throw new IllegalArgumentException("Choose the watermark area");if(width<8||height<8)throw new IllegalArgumentException("Unknown picture size");
+  StringBuilder f=new StringBuilder();boolean blur=mode.equals("blur");
+  if(!blur)f.append("pad=iw+4:ih+4:2:2,fillborders=left=2:right=2:top=2:bottom=2:mode=smear");
+  int index=0;
+  for(double[]r:regions){int x=(int)Math.floor(r[0]*width),y=(int)Math.floor(r[1]*height),w=(int)Math.ceil(r[2]*width),h=(int)Math.ceil(r[3]*height);
+   x=Math.max(0,Math.min(width-4,x));y=Math.max(0,Math.min(height-4,y));w=Math.max(4,Math.min(width-x,w));h=Math.max(4,Math.min(height-y,h));
+   if(blur){int radius=Math.max(1,Math.min(Math.min(w,h)/2-1,24)),chroma=Math.max(0,Math.min(Math.min(w,h)/4-1,12));String in=index==0?"":"[v"+index+"]";if(index>0)f.append(';');
+    f.append(in).append("split[m").append(index).append("][c").append(index).append("];[c").append(index).append("]crop=").append(w).append(':').append(h).append(':').append(x).append(':').append(y).append(",boxblur=luma_radius=").append(radius).append(":luma_power=3:chroma_radius=").append(chroma).append(":chroma_power=3[b").append(index).append("];[m").append(index).append("][b").append(index).append("]overlay=").append(x).append(':').append(y);
+    if(index<regions.size()-1)f.append("[v").append(index+1).append(']');}
+   else f.append(",delogo=x=").append(x+2).append(":y=").append(y+2).append(":w=").append(w).append(":h=").append(h);
+   index++;}
+  if(!blur)f.append(",crop=iw-4:ih-4:2:2");return f.toString();
+ }
+ /** Noise cleaning chain; level 1–3, each kind of noise switched on or off by the user. */
+ static String cleanChain(Job j){int level=Integer.parseInt(j.opt("level","2"));List<String> f=new ArrayList<String>();
+  if(j.opt("hum","1").equals("1")){f.add("highpass=f="+(level==3?100:80));f.add("bandreject=f=100:width_type=h:w=10");}
+  if(j.opt("clicks","1").equals("1")){f.add("adeclick=w=55:o=75:t="+(level==1?"4":level==3?"1.5":"2.5"));if(level>1)f.add("adeclip");}
+  if(j.opt("hiss","1").equals("1"))f.add("afftdn=nr="+(level==1?"10":level==3?"28":"18")+":nf="+(level==3?"-30":"-40")+":tn=1");
+  if(j.opt("voice","0").equals("1")){f.add("lowpass=f=9000");f.add("dynaudnorm=f=150:g=15");}
+  if(j.opt("loud","1").equals("1"))f.add("loudnorm=I=-16:TP=-1.5:LRA=11");
+  if(f.isEmpty())throw new IllegalArgumentException("Choose what to clean");return join(f,",");}
+ static String join(List<String> parts,String sep){StringBuilder b=new StringBuilder();for(String p:parts){if(b.length()>0)b.append(sep);b.append(p);}return b.toString();}
  private static void copyFile(File from,File to)throws IOException{InputStream in=new FileInputStream(from);try{OutputStream o=new FileOutputStream(to);try{byte[]b=new byte[65536];int n;while((n=in.read(b))>0)o.write(b,0,n);}finally{o.close();}}finally{in.close();}}
  public static boolean finite(double x){return !Double.isNaN(x)&&!Double.isInfinite(x);}
  public static double seconds(String text)throws Exception {

@@ -151,12 +151,10 @@ def icns(svg,out):
     out.write_bytes(b'icns'+struct.pack('>I',8+len(chunks))+chunks)
 
 def cpio(source,out):
-    files=['.']+[str(f.relative_to(source)) for f in sorted(source.rglob('*'))]
-    with out.open('wb') as target:
-        a=subprocess.Popen(['cpio','--quiet','--null','-o','--format=odc','--owner=0:0'],cwd=source,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
-        b=subprocess.Popen(['gzip','-6','-n'],stdin=a.stdout,stdout=target);a.stdout.close()
-        a.stdin.write(('\0'.join(files)+'\0').encode());a.stdin.close()
-        assert a.wait()==0 and b.wait()==0
+    # GNU cpio links odc entries by their 18-bit inode numbers; the hard-linked payload made
+    # unrelated files collide (a 2 KB icon got a 483 MB body). Every entry is written on its own.
+    sys.path.insert(0,str(PKG));import cpio_odc
+    cpio_odc.pack(source,out)
 
 def macos(cache,work,dist,platform,mkbom):
     arch='arm64' if platform=='osx-arm64' else 'x86_64'

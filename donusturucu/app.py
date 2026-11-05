@@ -607,6 +607,11 @@ class App(Gtk.Application):
         else:Window(self,self.paths)
 
 def main():
+    # The redesigned window (same look and tools as Android); the classic one stays importable.
+    from .studio import main as studio_main
+    return studio_main()
+
+def classic_main():
     import sys
     paths=[str(Path(p).expanduser().resolve()) for p in sys.argv[1:]]
     return App(paths).run([sys.argv[0]])
