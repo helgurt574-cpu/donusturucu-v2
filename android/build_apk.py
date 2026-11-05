@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parent;PROJECT=ROOT.parent;BUILD=ROOT/'build';BUIL
 CACHE=ROOT/'cache'
 SDK=Path(os.environ.get('ANDROID_HOME',Path.home()/'Android/Sdk'));TOOLS=SDK/'build-tools'/os.environ.get('DONUSTURUCU_BUILD_TOOLS','36.0.0')
 JAR=Path(os.environ.get('DONUSTURUCU_ANDROID_JAR',SDK/'platforms/android-35/android.jar'));AAPT=TOOLS/'aapt2'
-VERSION='1.4.1'
+VERSION='1.4.2'
 def run(args,**kwargs):subprocess.run(list(map(str,args)),check=True,**kwargs)
 classes=BUILD/'classes';
 if classes.exists():shutil.rmtree(classes)

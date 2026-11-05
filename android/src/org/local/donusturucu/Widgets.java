@@ -126,4 +126,43 @@ final class Widgets {
   @Override public boolean onTouchEvent(MotionEvent e){if(e.getActionMasked()==MotionEvent.ACTION_DOWN)getParent().requestDisallowInterceptTouchEvent(true);
    if(e.getActionMasked()==MotionEvent.ACTION_UP&&seek!=null)seek.to(Math.max(0,Math.min(1,e.getX()/Math.max(1,getWidth()))));return true;}
  }
+ /** Full screen picture: pinch or double tap to zoom, drag to look around, swipe sideways for the next page, tap for the bars. */
+ static final class Zoom extends View {
+  interface Listener {void tap();void turn(int dir);}
+  Listener listener;private Bitmap bmp,old;private float fade=1f;private int dir=0;
+  private final Matrix m=new Matrix();private final float[] v=new float[9];private final Paint paint=new Paint(Paint.FILTER_BITMAP_FLAG|Paint.ANTI_ALIAS_FLAG);
+  private final ScaleGestureDetector pinch;private final GestureDetector gestures;private ValueAnimator zooming;
+  Zoom(Context c){super(c);
+   pinch=new ScaleGestureDetector(c,new ScaleGestureDetector.SimpleOnScaleGestureListener(){
+    public boolean onScale(ScaleGestureDetector d){float s=scale(),to=Math.max(fit()*0.9f,Math.min(fit()*8,s*d.getScaleFactor()));m.postScale(to/s,to/s,d.getFocusX(),d.getFocusY());bound();invalidate();return true;}
+    public void onScaleEnd(ScaleGestureDetector d){if(scale()<fit())animateTo(fit(),getWidth()/2f,getHeight()/2f);}});
+   gestures=new GestureDetector(c,new GestureDetector.SimpleOnGestureListener(){
+    public boolean onDown(MotionEvent e){if(zooming!=null)zooming.cancel();return true;}
+    public boolean onSingleTapConfirmed(MotionEvent e){if(listener!=null)listener.tap();return true;}
+    public boolean onDoubleTap(MotionEvent e){animateTo(zoomed()?fit():fit()*2.6f,e.getX(),e.getY());return true;}
+    public boolean onScroll(MotionEvent a,MotionEvent b,float dx,float dy){if(!zoomed())return false;m.postTranslate(-dx,-dy);bound();invalidate();return true;}
+    public boolean onFling(MotionEvent a,MotionEvent b,float vx,float vy){if(zoomed()||a==null||listener==null)return false;float dx=b.getX()-a.getX();
+     if(Math.abs(dx)>Math.abs(b.getY()-a.getY())&&Math.abs(dx)>getWidth()*0.12f&&Math.abs(vx)>400){listener.turn(dx<0?1:-1);return true;}return false;}});}
+  Bitmap bitmap(){return bmp;}
+  /** New picture; with a direction it slides in from that side and pushes the old one out, like turning a page. */
+  void show(Bitmap b,int direction){if(bmp==null||direction==0||b==null){bmp=b;old=null;fade=1f;reset();return;}
+   old=bmp;bmp=b;dir=direction;fade=0f;reset();ValueAnimator a=ValueAnimator.ofFloat(0f,1f);a.setDuration(280);a.setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f));
+   a.addUpdateListener(new ValueAnimator.AnimatorUpdateListener(){public void onAnimationUpdate(ValueAnimator x){fade=(Float)x.getAnimatedValue();if(fade>=1f)old=null;invalidate();}});a.start();}
+  boolean zoomed(){return bmp!=null&&scale()>fit()*1.05f;}
+  private float scale(){m.getValues(v);return v[Matrix.MSCALE_X];}
+  private float fit(){if(bmp==null||getWidth()==0)return 1;return Math.min((float)getWidth()/bmp.getWidth(),(float)getHeight()/bmp.getHeight());}
+  private void reset(){m.reset();if(bmp!=null&&getWidth()>0){float s=fit();m.postScale(s,s);m.postTranslate((getWidth()-bmp.getWidth()*s)/2f,(getHeight()-bmp.getHeight()*s)/2f);}invalidate();}
+  @Override protected void onSizeChanged(int w,int h,int ow,int oh){reset();}
+  /** Keeps the picture on screen: centred when smaller than the view, edges never pulled inside. */
+  private void bound(){if(bmp==null)return;RectF r=new RectF(0,0,bmp.getWidth(),bmp.getHeight());m.mapRect(r);float dx=0,dy=0;
+   if(r.width()<=getWidth())dx=(getWidth()-r.width())/2f-r.left;else if(r.left>0)dx=-r.left;else if(r.right<getWidth())dx=getWidth()-r.right;
+   if(r.height()<=getHeight())dy=(getHeight()-r.height())/2f-r.top;else if(r.top>0)dy=-r.top;else if(r.bottom<getHeight())dy=getHeight()-r.bottom;m.postTranslate(dx,dy);}
+  private void animateTo(final float target,final float fx,final float fy){if(zooming!=null)zooming.cancel();final float from=scale();zooming=ValueAnimator.ofFloat(0f,1f);zooming.setDuration(220);
+   zooming.addUpdateListener(new ValueAnimator.AnimatorUpdateListener(){public void onAnimationUpdate(ValueAnimator x){float t=(Float)x.getAnimatedValue(),want=from+(target-from)*t,s=scale();m.postScale(want/s,want/s,fx,fy);bound();invalidate();}});zooming.start();}
+  @Override public boolean onTouchEvent(MotionEvent e){pinch.onTouchEvent(e);gestures.onTouchEvent(e);if(zoomed()||e.getPointerCount()>1)getParent().requestDisallowInterceptTouchEvent(true);return true;}
+  @Override protected void onDraw(Canvas c){
+   if(old!=null&&!old.isRecycled()){float s=Math.min((float)getWidth()/old.getWidth(),(float)getHeight()/old.getHeight());c.save();c.translate((getWidth()-old.getWidth()*s)/2f-dir*fade*getWidth(),(getHeight()-old.getHeight()*s)/2f);c.scale(s,s);
+    paint.setAlpha(255);c.drawBitmap(old,0,0,paint);c.restore();}
+   if(bmp!=null&&!bmp.isRecycled()){c.save();c.translate(old!=null?dir*(1-fade)*getWidth():0,0);c.concat(m);paint.setAlpha(255);c.drawBitmap(bmp,0,0,paint);c.restore();}}
+ }
 }

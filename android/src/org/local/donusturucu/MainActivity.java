@@ -4,7 +4,7 @@ import java.io.*;import java.util.*;import java.util.zip.*;import org.json.*;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 
 public class MainActivity extends Activity {
- static final String VERSION="1.4.1";
+ static final String VERSION="1.4.2";
  static class ListedFile {File file;String name,ext;MediaEngine.Info info;File thumb;ListedFile(File f,String n,String e,MediaEngine.Info i){file=f;name=n;ext=e;info=i;}}
  /** Result of the preview button: a comparison, a short clip or sound, thumbnails or text. */
  static final class Preview {String action,kind,note,text;Bitmap before,after;File original,result;float[] peaksA,peaksB;List<Bitmap> thumbs=new ArrayList<Bitmap>();List<String> captions=new ArrayList<String>();boolean showResult=true;}
@@ -449,7 +449,9 @@ public class MainActivity extends Activity {
   String[] l=label(o.optString("action"));col.addView(ui.small((ku?l[1]:l[0])+" · "+android.text.format.DateUtils.getRelativeTimeSpanString(o.optLong("time"),System.currentTimeMillis(),android.text.format.DateUtils.MINUTE_IN_MILLIS)));row.addView(col,new LinearLayout.LayoutParams(0,-2,1));
   row.addView(iconButton("share",new View.OnClickListener(){public void onClick(View v){share(Arrays.asList(Uri.parse(o.optString("uri"))),Arrays.asList(o.optString("mime")));}}));
   row.setOnClickListener(new View.OnClickListener(){public void onClick(View v){open(Uri.parse(o.optString("uri")),o.optString("mime"));}});return row;}
- private void open(Uri uri,String mime){try{Intent i=new Intent(Intent.ACTION_VIEW);i.setDataAndType(uri,mime);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(i);}catch(Exception e){toast(t("Bu dosyayı açabilecek uygulama bulunamadı veya dosya taşınmış.","Sepana ku vê dosyeyê veke nehat dîtin an dosye hatiye guhestin."));}}
+ /** Results open in the app's own quick viewer; from there "Başka uygulamayla aç" offers the others. */
+ private void open(Uri uri,String mime){try{Intent q=new Intent(this,QuickView.class);q.setAction(Intent.ACTION_VIEW);q.setDataAndType(uri,mime);q.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(q);return;}catch(Exception ignored){}
+  try{Intent i=new Intent(Intent.ACTION_VIEW);i.setDataAndType(uri,mime);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(i);}catch(Exception e){toast(t("Bu dosyayı açabilecek uygulama bulunamadı veya dosya taşınmış.","Sepana ku vê dosyeyê veke nehat dîtin an dosye hatiye guhestin."));}}
  private void share(List<Uri> uris,List<String> mimes){try{Intent i;if(uris.size()==1){i=new Intent(Intent.ACTION_SEND);i.setType(mimes.get(0));i.putExtra(Intent.EXTRA_STREAM,uris.get(0));}else{i=new Intent(Intent.ACTION_SEND_MULTIPLE);i.setType("*/*");i.putParcelableArrayListExtra(Intent.EXTRA_STREAM,new ArrayList<Uri>(uris));}
   i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(Intent.createChooser(i,t("Paylaş","Parve bike")));}catch(Exception e){toast(t("Paylaşılamadı.","Nehat parvekirin."));}}
  private void toast(final String s){runOnUiThread(new Runnable(){public void run(){Toast.makeText(MainActivity.this,s,Toast.LENGTH_LONG).show();}});}
