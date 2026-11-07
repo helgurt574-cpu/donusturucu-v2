@@ -29,6 +29,12 @@ Kurulum ve kullanım için `KULLANIM.txt` dosyasına bakın. Hazır paketler bu 
 - Başlat/Önizle mantığı `donusturucu/jobs.py`'de ortak; motor cairo gerektirmez (fotoğraftan PDF doğrudan yazılır)
 - `browser-ui/server.py` artık `webapp.serve(desktop=False)` çağırır
 
+## Android 1.4.4 ve Google Play
+
+- Paket adı `com.donusturucu.app` (Java paketi `org.local.donusturucu` olarak kaldı; manifestte etkinlik adları tam yazılı), hedef API 36, Android 16 geri hareketi için `OnBackInvokedCallback`
+- `android/build_aab.py`: Play için App Bundle. Önce `build_apk.py`'yi çalıştırır, sonra `base` modülü ve konuşma modelini taşıyan install-time asset pack `speech_models`'i bundletool ile birleştirir (bundletool Gradle önbelleğinden, ya da `BUNDLETOOL=/yol/bundletool-all.jar`), `signing/` anahtarıyla imzalar ve doğrular. Çıktı: `dist/Donusturucu-arm64.aab`
+- Play mağaza metinleri, görseller ve gizlilik politikası depo dışında `../playstore/` klasöründe
+
 ## Android 1.4.2 – 1.4.3
 
 - **Hızlı önizleme** (`QuickView.java`): Dosyalar uygulamasında dokununca seçim listesinde "Önizle" çıkar; dosya yöneticisinin üstünde alttan açılan panelde fotoğraf (yakınlaştırma), PDF ve Word/ODT/EPUB (kaydırarak sayfa geçişi), video, ses ve metin gösterilir; dışına dokunmak veya aşağı çekmek kapatır, tam ekran düğmesi var. "Dönüştür" dosyayı çalışma alanına aktarır, sonuçların "Aç" düğmesi de bu görüntüleyiciyi kullanır

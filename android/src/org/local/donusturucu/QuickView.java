@@ -27,6 +27,7 @@ public class QuickView extends Activity {
  @Override public void onCreate(Bundle state){SharedPreferences p=getSharedPreferences("MainActivity",0);ku=p.getBoolean("ku",false);String theme=p.getString("theme","system");
   int night=getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK;dark=theme.equals("dark")||(theme.equals("system")&&night==android.content.res.Configuration.UI_MODE_NIGHT_YES);
   ui=new Ui(this,dark,p.getInt("accent",0));super.onCreate(state);PDFBoxResourceLoader.init(this);
+  if(Build.VERSION.SDK_INT>=33)getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,new android.window.OnBackInvokedCallback(){public void onBackInvoked(){handleBack();}});
   work=new File(getCacheDir(),"quick");deleteTree(work);work.mkdirs();
   FrameLayout root=new FrameLayout(this);dim=new View(this);dim.setBackgroundColor(0x8C000000);dim.setOnClickListener(new View.OnClickListener(){public void onClick(View v){dismiss();}});root.addView(dim,new FrameLayout.LayoutParams(-1,-1));
   sheet=ui.column();sheet.setClickable(true);root.addView(sheet,new FrameLayout.LayoutParams(-1,sheetHeight(),Gravity.BOTTOM));
@@ -53,7 +54,8 @@ public class QuickView extends Activity {
  @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);release();stage.removeAllViews();controls.removeAllViews();controls.setVisibility(View.GONE);rendered.evictAll();pdf=null;open(i);}
  @Override protected void onPause(){super.onPause();if(video!=null&&video.isPlaying()){video.pause();icon();}if(sound!=null&&sound.isPlaying()){sound.pause();icon();}}
  @Override protected void onDestroy(){release();worker.shutdownNow();deleteTree(work);super.onDestroy();}
- @Override public void onBackPressed(){if(full)setFull(false);else dismiss();}
+ @Override public void onBackPressed(){handleBack();}
+ private void handleBack(){if(full)setFull(false);else dismiss();}
  @Override public void onConfigurationChanged(android.content.res.Configuration c){super.onConfigurationChanged(c);sheet.getLayoutParams().height=sheetHeight();stage.getLayoutParams().height=stageHeight();sheet.requestLayout();}
  private void release(){handler.removeCallbacksAndMessages(null);if(video!=null){video.stopPlayback();video=null;}if(sound!=null){sound.release();sound=null;}}
 
