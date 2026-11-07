@@ -68,7 +68,7 @@ final class Widgets {
    ValueAnimator a=ValueAnimator.ofFloat(0f,1f);a.setDuration(220);a.addUpdateListener(new ValueAnimator.AnimatorUpdateListener(){public void onAnimationUpdate(ValueAnimator v){fade=(Float)v.getAnimatedValue();if(fade>=1f)fadeFrom=null;invalidate();}});a.start();}
   void compare(Bitmap a,Bitmap b,String la,String lb){before=a;after=b;beforeLabel=la;afterLabel=lb;mode=COMPARE;requestLayout();invalidate();}
   @Override protected void onMeasure(int w,int h){int width=MeasureSpec.getSize(w);int height=ui.dp(220);
-   if(before!=null){height=(int)((float)width*before.getHeight()/Math.max(1,before.getWidth()));height=Math.max(ui.dp(140),Math.min(height,ui.dp(mode==VIEW?360:440)));}
+   if(before!=null){height=(int)((float)width*before.getHeight()/Math.max(1,before.getWidth()));int screen=getResources().getDisplayMetrics().heightPixels;height=Math.max(ui.dp(140),Math.min(height,mode==VIEW?Math.max(ui.dp(360),(int)(screen*0.62f)):ui.dp(440)));}
    setMeasuredDimension(width,height);}
   private void layoutFrame(){if(before==null){frame.set(0,0,getWidth(),getHeight());return;}float s=Math.min((float)getWidth()/before.getWidth(),(float)getHeight()/before.getHeight());float w=before.getWidth()*s,h=before.getHeight()*s;frame.set((getWidth()-w)/2,(getHeight()-h)/2,(getWidth()+w)/2,(getHeight()+h)/2);}
   @Override protected void onDraw(Canvas c){

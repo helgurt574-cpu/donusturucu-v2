@@ -29,10 +29,11 @@ Kurulum ve kullanım için `KULLANIM.txt` dosyasına bakın. Hazır paketler bu 
 - Başlat/Önizle mantığı `donusturucu/jobs.py`'de ortak; motor cairo gerektirmez (fotoğraftan PDF doğrudan yazılır)
 - `browser-ui/server.py` artık `webapp.serve(desktop=False)` çağırır
 
-## Android 1.4.2
+## Android 1.4.2 – 1.4.3
 
 - **Hızlı önizleme** (`QuickView.java`): Dosyalar uygulamasında dokununca seçim listesinde "Önizle" çıkar; dosya yöneticisinin üstünde alttan açılan panelde fotoğraf (yakınlaştırma), PDF ve Word/ODT/EPUB (kaydırarak sayfa geçişi), video, ses ve metin gösterilir; dışına dokunmak veya aşağı çekmek kapatır, tam ekran düğmesi var. "Dönüştür" dosyayı çalışma alanına aktarır, sonuçların "Aç" düğmesi de bu görüntüleyiciyi kullanır
 - Yakınlaştırılabilir resim görünümü `Widgets.Zoom`
+- 1.4.3: panelde önizleme dosyanın en/boy oranında büyür; altında donut biçim seçici ve araç kısayolları. Seçim `quick_action` / `quick_format` ile `MainActivity`'ye geçer: biçim hemen dönüştürülür, araç ayarlarıyla açılır
 
 ## Android 1.4.0
 
