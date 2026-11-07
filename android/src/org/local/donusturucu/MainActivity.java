@@ -4,7 +4,7 @@ import java.io.*;import java.util.*;import java.util.zip.*;import org.json.*;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 
 public class MainActivity extends Activity {
- static final String VERSION="1.4.3";
+ static final String VERSION="1.4.4";
  static class ListedFile {File file;String name,ext;MediaEngine.Info info;File thumb;ListedFile(File f,String n,String e,MediaEngine.Info i){file=f;name=n;ext=e;info=i;}}
  /** Result of the preview button: a comparison, a short clip or sound, thumbnails or text. */
  static final class Preview {String action,kind,note,text;Bitmap before,after;File original,result;float[] peaksA,peaksB;List<Bitmap> thumbs=new ArrayList<Bitmap>();List<String> captions=new ArrayList<String>();boolean showResult=true;}
@@ -31,7 +31,7 @@ public class MainActivity extends Activity {
 
  public void onCreate(Bundle state){SharedPreferences p=getPreferences(0);themeMode=p.getString("theme","system");accentIndex=p.getInt("accent",0);ku=p.getBoolean("ku",false);palette();
   setTheme(dark?android.R.style.Theme_Material_NoActionBar:android.R.style.Theme_Material_Light_NoActionBar);super.onCreate(state);
-  String saved=p.getString("tree",null);if(saved!=null)outputTree=Uri.parse(saved);PDFBoxResourceLoader.init(this);build();
+  registerBack();String saved=p.getString("tree",null);if(saved!=null)outputTree=Uri.parse(saved);PDFBoxResourceLoader.init(this);build();
   new Thread(new Runnable(){public void run(){try{prepareNative();ready=true;message(t("Hazır. Dosyanı seçebilirsin.","Amade ye. Dosyeya xwe hilbijêre."));runOnUiThread(new Runnable(){public void run(){if(!busy&&!screen.equals("work"))build();}});
    Intent in=getIntent();
    if(in.getBooleanExtra("orientation_test",false))OrientationSelfTest.run(MainActivity.this);if(in.getBooleanExtra("detection_test",false))DetectionSelfTest.run(MainActivity.this);if(in.getBooleanExtra("rich_test",false))FeatureSelfTest.rich(MainActivity.this);
@@ -806,7 +806,10 @@ public class MainActivity extends Activity {
   return null;
  }
  private void failure(final Exception e){String detail=imageError(e.getMessage(),ku);if(detail==null&&(e instanceof IOException||e instanceof IllegalArgumentException)&&e.getMessage()!=null&&!(e instanceof InterruptedIOException)&&e.getMessage().indexOf('\n')<0&&!e.getMessage().startsWith("/"))detail=e.getMessage();final String value=t("İşlem tamamlanamadı: ","Kar nehat temamkirin: ")+(detail==null?e.toString():detail);log.append(value).append('\n');lastStatus=value;runOnUiThread(new Runnable(){public void run(){if(status!=null)status.setText(value);else toast(value);}});}
- public void onBackPressed(){if(busy){new AlertDialog.Builder(this).setMessage(t("İşlemi durdurup çıkılsın mı?","Kar were rawestandin û derkeve?" )).setPositiveButton(t("Durdur ve çık","Rawestîne û derkeve"),new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int n){cancel();finish();}}).setNegativeButton(t("Devam et","Berdewam bike"),null).show();return;}
-  if(!screen.equals("home")){go("home");return;}super.onBackPressed();}
+ /** Android 16 sends Back through the dispatcher; older versions call onBackPressed. Both land here. */
+ private void registerBack(){if(Build.VERSION.SDK_INT>=33)getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,new android.window.OnBackInvokedCallback(){public void onBackInvoked(){handleBack();}});}
+ public void onBackPressed(){handleBack();}
+ private void handleBack(){if(busy){new AlertDialog.Builder(this).setMessage(t("İşlemi durdurup çıkılsın mı?","Kar were rawestandin û derkeve?" )).setPositiveButton(t("Durdur ve çık","Rawestîne û derkeve"),new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int n){cancel();finish();}}).setNegativeButton(t("Devam et","Berdewam bike"),null).show();return;}
+  if(!screen.equals("home")){go("home");return;}if(isTaskRoot())moveTaskToBack(true);else finish();}
  protected void onDestroy(){if(isFinishing())cancelled=true;stopMedia();super.onDestroy();}
 }
