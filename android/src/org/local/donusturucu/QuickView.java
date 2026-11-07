@@ -14,7 +14,7 @@ public class QuickView extends Activity {
  static final List<String> DOCS=Arrays.asList("docx","odt","epub","html","htm","rtf","pptx","odp","xlsx");
 
  private Ui ui;private boolean ku,dark,full=false,closing=false;private Uri uri;private String mime,name="",ext="",kind="";private long size=-1;
- private View dim;private LinearLayout sheet,controls;private FrameLayout stage,badgeBox;private TextView title,subtitle,expand;private int insetTop,insetBottom;
+ private View dim;private LinearLayout sheet,controls,shortcuts;private ScrollView body;private String chosen="";private TextView goButton;private FrameLayout stage,badgeBox;private TextView title,subtitle,expand;private int insetTop,insetBottom;
  private Widgets.Zoom zoom;private File pdf;private int page=0,pages=0,pageToken=0;private TextView pageLabel;private SeekBar pageSeek;private final LruCache<Integer,Bitmap> rendered=new LruCache<Integer,Bitmap>(5);
  private VideoView video;private MediaPlayer sound;private TextView playButton,timeLabel;private SeekBar seek;
  private final Handler handler=new Handler(Looper.getMainLooper());private final java.util.concurrent.ExecutorService worker=java.util.concurrent.Executors.newSingleThreadExecutor();
@@ -29,20 +29,18 @@ public class QuickView extends Activity {
   ui=new Ui(this,dark,p.getInt("accent",0));super.onCreate(state);PDFBoxResourceLoader.init(this);
   work=new File(getCacheDir(),"quick");deleteTree(work);work.mkdirs();
   FrameLayout root=new FrameLayout(this);dim=new View(this);dim.setBackgroundColor(0x8C000000);dim.setOnClickListener(new View.OnClickListener(){public void onClick(View v){dismiss();}});root.addView(dim,new FrameLayout.LayoutParams(-1,-1));
-  sheet=ui.column();sheet.setClickable(true);root.addView(sheet,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));
+  sheet=ui.column();sheet.setClickable(true);root.addView(sheet,new FrameLayout.LayoutParams(-1,sheetHeight(),Gravity.BOTTOM));
   View handle=new View(this);handle.setBackground(ui.round(ui.border,3,0));LinearLayout.LayoutParams hl=new LinearLayout.LayoutParams(dp(40),dp(5));hl.gravity=Gravity.CENTER_HORIZONTAL;hl.setMargins(0,dp(10),0,dp(6));sheet.addView(handle,hl);
   LinearLayout head=ui.row();head.setPadding(0,dp(4),0,dp(12));badgeBox=new FrameLayout(this);head.addView(badgeBox,new LinearLayout.LayoutParams(dp(44),dp(44)));
   LinearLayout names=ui.column();names.setPadding(dp(12),0,dp(4),0);title=ui.label("",16,ui.text,true);title.setSingleLine(true);title.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);subtitle=ui.small("");subtitle.setSingleLine(true);
   names.addView(title);names.addView(subtitle);head.addView(names,new LinearLayout.LayoutParams(0,-2,1));
   expand=iconButton("expand",new View.OnClickListener(){public void onClick(View v){setFull(!full);}});head.addView(expand);
   head.addView(iconButton("close",new View.OnClickListener(){public void onClick(View v){dismiss();}}));sheet.addView(head);
-  stage=new FrameLayout(this);stage.setBackground(ui.round(dark?0xFF0E0D12:0xFFE9E7EF,18,0));stage.setClipToOutline(true);sheet.addView(stage,new LinearLayout.LayoutParams(-1,stageHeight()));
-  controls=ui.column();controls.setPadding(0,dp(6),0,0);controls.setVisibility(View.GONE);sheet.addView(controls);
-  LinearLayout actions=ui.row();actions.setPadding(0,dp(12),0,0);
-  TextView go=ui.button(t("Dönüştür","Veguherîne"),"wand",0,new View.OnClickListener(){public void onClick(View v){toWorkspace();}});actions.addView(go,new LinearLayout.LayoutParams(0,-2,1));
-  actions.addView(roundButton("share",t("Paylaş","Parve bike"),new View.OnClickListener(){public void onClick(View v){share();}}));
-  actions.addView(roundButton("open",t("Başka uygulamayla aç","Bi sepaneke din veke"),new View.OnClickListener(){public void onClick(View v){openElsewhere();}}));
-  sheet.addView(actions);
+  // Everything under the title scrolls: the big preview first, then the format ring and the tools.
+  body=new ScrollView(this);body.setVerticalScrollBarEnabled(false);body.setOverScrollMode(View.OVER_SCROLL_NEVER);LinearLayout inner=ui.column();body.addView(inner);sheet.addView(body,new LinearLayout.LayoutParams(-1,0,1));
+  stage=new FrameLayout(this);stage.setBackground(ui.round(dark?0xFF0E0D12:0xFFE9E7EF,18,0));stage.setClipToOutline(true);inner.addView(stage,new LinearLayout.LayoutParams(-1,stageHeight()));
+  controls=ui.column();controls.setPadding(0,dp(6),0,0);controls.setVisibility(View.GONE);inner.addView(controls);
+  shortcuts=ui.column();inner.addView(shortcuts);
   View.OnTouchListener drag=dragToClose();handle.setOnTouchListener(drag);names.setOnTouchListener(drag);badgeBox.setOnTouchListener(drag);
   setContentView(root);
   Window w=getWindow();w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION|(dark?0:View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR));
@@ -56,16 +54,22 @@ public class QuickView extends Activity {
  @Override protected void onPause(){super.onPause();if(video!=null&&video.isPlaying()){video.pause();icon();}if(sound!=null&&sound.isPlaying()){sound.pause();icon();}}
  @Override protected void onDestroy(){release();worker.shutdownNow();deleteTree(work);super.onDestroy();}
  @Override public void onBackPressed(){if(full)setFull(false);else dismiss();}
- @Override public void onConfigurationChanged(android.content.res.Configuration c){super.onConfigurationChanged(c);if(!full)stage.getLayoutParams().height=stageHeight();stage.requestLayout();}
+ @Override public void onConfigurationChanged(android.content.res.Configuration c){super.onConfigurationChanged(c);sheet.getLayoutParams().height=sheetHeight();stage.getLayoutParams().height=stageHeight();sheet.requestLayout();}
  private void release(){handler.removeCallbacksAndMessages(null);if(video!=null){video.stopPlayback();video=null;}if(sound!=null){sound.release();sound=null;}}
 
  // ---------------------------------------------------------------- the panel
- private int stageHeight(){int h=screenHeight();return kind.equals("audio")?dp(170):(int)(h*0.5f);}
+ private int stageHeight(){int h=screenHeight();if(full)return Math.max(dp(200),h-insetTop-insetBottom-dp(controls!=null&&controls.getVisibility()==View.VISIBLE?190:110));
+  return kind.equals("audio")?dp(170):kind.equals("image")||kind.equals("text")?(int)(h*0.56f):(int)(h*0.64f);}
+ /** The frame takes the picture's shape: a wide video gets no empty black bands, a page stays tall. */
+ private void fitStage(int w,int h){if(full||w<=0||h<=0)return;int width=stage.getWidth()>0?stage.getWidth():getResources().getDisplayMetrics().widthPixels-dp(32);
+  int want=Math.max(dp(200),Math.min(stageHeight(),Math.round((float)width*h/w)));if(stage.getLayoutParams().height!=want){stage.getLayoutParams().height=want;stage.requestLayout();}}
+ /** The panel takes most of the screen; the file list stays visible above it. */
+ private int sheetHeight(){return full?-1:(int)(screenHeight()*0.93f);}
  private void pad(){sheet.setPadding(dp(16),full?insetTop:0,dp(16),insetBottom+dp(12));
   float r=full?0:dp(26);GradientDrawable g=new GradientDrawable();g.setColor(ui.surface);g.setCornerRadii(new float[]{r,r,r,r,0,0,0,0});sheet.setBackground(g);}
  /** Panel or the whole screen; the picture keeps its place, only the frame grows. */
- private void setFull(boolean on){full=on;FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)sheet.getLayoutParams();lp.height=on?-1:-2;sheet.setLayoutParams(lp);
-  LinearLayout.LayoutParams sl=(LinearLayout.LayoutParams)stage.getLayoutParams();sl.height=on?0:stageHeight();sl.weight=on?1:0;stage.setLayoutParams(sl);
+ private void setFull(boolean on){full=on;FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)sheet.getLayoutParams();lp.height=sheetHeight();sheet.setLayoutParams(lp);
+  stage.getLayoutParams().height=stageHeight();stage.requestLayout();body.scrollTo(0,0);
   expand.setCompoundDrawablesRelative(ui.icon(on?"collapse":"expand",ui.text,22),null,null,null);pad();
   getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION|(dark?0:View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR|(on?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR:0)));}
  private void dismiss(){if(closing)return;closing=true;if(video!=null)video.pause();if(sound!=null)try{sound.pause();}catch(Exception ignored){}
@@ -106,9 +110,10 @@ public class QuickView extends Activity {
    :ext.equals("pdf")||mime.equals("application/pdf")?"pdf":DOCS.contains(ext)?"doc":TEXTS.contains(ext)||mime.startsWith("text/")?"text":"other";
   title.setText(name);subtitle.setText(describe(null));badgeBox.removeAllViews();
   FrameLayout b=ui.badge(kind.equals("image")?"image":kind.equals("video")?"video":kind.equals("audio")?"audio":kind.equals("text")?"text":"doc",44,ui.accentSoft,ui.accentText);b.setLayoutParams(new FrameLayout.LayoutParams(-1,-1));badgeBox.addView(b);
-  stage.setBackground(ui.round(dark?0xFF0E0D12:0xFFE9E7EF,18,0));if(!full)stage.getLayoutParams().height=stageHeight();
+  stage.setBackground(ui.round(dark?0xFF0E0D12:0xFFE9E7EF,18,0));stage.getLayoutParams().height=stageHeight();shortcuts.removeAllViews();body.scrollTo(0,0);
+  loadShortcuts();
   if(kind.equals("video"))showVideo();else if(kind.equals("audio"))showSound();
-  else if(kind.equals("other"))message(t("Bu dosya türü önizlenemiyor.\n\"Dönüştür\" ile başka biçime çevirebilirsin.","Ev cureyê dosyeyê nayê pêşdîtin.\nBi \"Veguherîne\" dikarî biguherînî."),false);
+  else if(kind.equals("other"))message(t("Bu dosya türü önizlenemiyor.\nAşağıdan Dönüştürücü'de açıp başka biçime çevirebilirsin.","Ev cureyê dosyeyê nayê pêşdîtin.\nBi \"Veguherîne\" dikarî biguherînî."),false);
   else{message(kind.equals("doc")?t("Belge hazırlanıyor…","Belge tê amadekirin…"):t("Açılıyor…","Tê vekirin…"),true);
    worker.execute(new Runnable(){public void run(){try{File f=copy();
     if(kind.equals("image")){final Bitmap b=Tools.load(f,4096);runOnUiThread(new Runnable(){public void run(){showPicture(b);subtitle.setText(describe(b.getWidth()+" × "+b.getHeight()));}});}
@@ -127,10 +132,10 @@ public class QuickView extends Activity {
 
  // ---------------------------------------------------------------- pictures and pages
  private Widgets.Zoom zoomView(){zoom=new Widgets.Zoom(this);zoom.listener=new Widgets.Zoom.Listener(){public void tap(){}public void turn(int d){turnPage(d);}};return zoom;}
- private void showPicture(Bitmap b){stage.removeAllViews();stage.addView(zoomView(),new FrameLayout.LayoutParams(-1,-1));zoom.show(b,0);}
+ private void showPicture(Bitmap b){fitStage(b.getWidth(),b.getHeight());stage.removeAllViews();stage.addView(zoomView(),new FrameLayout.LayoutParams(-1,-1));zoom.show(b,0);}
  private int renderWidth(){android.util.DisplayMetrics m=getResources().getDisplayMetrics();return Math.min(2400,Math.max(m.widthPixels,m.heightPixels*3/4)*3/2);}
  private Bitmap pageBitmap(int i)throws IOException{Bitmap b=rendered.get(i);if(b==null){b=Tools.renderPage(pdf,i,renderWidth());rendered.put(i,b);}return b;}
- private void showPages(Bitmap first){stage.removeAllViews();stage.addView(zoomView(),new FrameLayout.LayoutParams(-1,-1));zoom.show(first,0);page=0;subtitle.setText(describe(pages+t(" sayfa"," rûpel")));
+ private void showPages(Bitmap first){fitStage(first.getWidth(),first.getHeight());stage.removeAllViews();stage.addView(zoomView(),new FrameLayout.LayoutParams(-1,-1));zoom.show(first,0);page=0;subtitle.setText(describe(pages+t(" sayfa"," rûpel")));
   controls.removeAllViews();LinearLayout r=ui.row();
   r.addView(iconButton("chevron_left",new View.OnClickListener(){public void onClick(View v){turnPage(-1);}}));
   pageLabel=ui.label("",14,ui.text,true);pageLabel.setGravity(Gravity.CENTER);r.addView(pageLabel,new LinearLayout.LayoutParams(0,-2,1));
@@ -157,15 +162,15 @@ public class QuickView extends Activity {
  private void showVideo(){stage.removeAllViews();stage.setBackground(ui.round(0xFF000000,18,0));video=new VideoView(this);final VideoView v=video;stage.addView(v,new FrameLayout.LayoutParams(-2,-2,Gravity.CENTER));
   View catcher=new View(this);catcher.setOnClickListener(new View.OnClickListener(){public void onClick(View x){if(playButton!=null)playButton.performClick();}});stage.addView(catcher,new FrameLayout.LayoutParams(-1,-1));
   mediaControls();
-  v.setOnPreparedListener(new MediaPlayer.OnPreparedListener(){public void onPrepared(MediaPlayer mp){seek.setMax(Math.max(1,v.getDuration()));subtitle.setText(describe(mp.getVideoWidth()+"×"+mp.getVideoHeight()+" · "+MainActivity.clock(v.getDuration()/1000.0)));v.start();tick();}});
+  v.setOnPreparedListener(new MediaPlayer.OnPreparedListener(){public void onPrepared(MediaPlayer mp){fitStage(mp.getVideoWidth(),mp.getVideoHeight());seek.setMax(Math.max(1,v.getDuration()));subtitle.setText(describe(mp.getVideoWidth()+"×"+mp.getVideoHeight()+" · "+MainActivity.clock(v.getDuration()/1000.0)));v.start();tick();}});
   v.setOnCompletionListener(new MediaPlayer.OnCompletionListener(){public void onCompletion(MediaPlayer mp){icon();}});
-  v.setOnErrorListener(new MediaPlayer.OnErrorListener(){public boolean onError(MediaPlayer mp,int a,int b){release();stage.setBackground(ui.round(dark?0xFF0E0D12:0xFFE9E7EF,18,0));message(t("Bu video telefonun oynatıcısıyla gösterilemiyor.\n\"Dönüştür\" ile MP4'e çevirebilirsin.","Ev vîdyo bi lîstikvana telefonê nayê nîşandan.\nBi \"Veguherîne\" dikarî bikî MP4."),false);controls.setVisibility(View.GONE);return true;}});
+  v.setOnErrorListener(new MediaPlayer.OnErrorListener(){public boolean onError(MediaPlayer mp,int a,int b){release();stage.setBackground(ui.round(dark?0xFF0E0D12:0xFFE9E7EF,18,0));message(t("Bu video telefonun oynatıcısıyla gösterilemiyor.\nAşağıdan MP4'e dönüştürebilirsin.","Ev vîdyo bi lîstikvana telefonê nayê nîşandan.\nBi \"Veguherîne\" dikarî bikî MP4."),false);controls.setVisibility(View.GONE);return true;}});
   v.setVideoURI(uri);}
  private void showSound(){stage.removeAllViews();LinearLayout c=ui.column();c.setGravity(Gravity.CENTER);c.addView(ui.badge("audio",84,ui.accentSoft,ui.accentText));stage.addView(c,new FrameLayout.LayoutParams(-1,-1));
   mediaControls();sound=new MediaPlayer();final MediaPlayer mp=sound;
   try{mp.setDataSource(this,uri);mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener(){public void onPrepared(MediaPlayer x){seek.setMax(Math.max(1,x.getDuration()));subtitle.setText(describe(MainActivity.clock(x.getDuration()/1000.0)));x.start();tick();}});
    mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener(){public void onCompletion(MediaPlayer x){icon();}});
-   mp.setOnErrorListener(new MediaPlayer.OnErrorListener(){public boolean onError(MediaPlayer x,int a,int b){release();message(t("Bu ses telefonda çalınamıyor.\n\"Dönüştür\" ile MP3'e çevirebilirsin.","Ev deng li telefonê nayê lêdan.\nBi \"Veguherîne\" dikarî bikî MP3."),false);controls.setVisibility(View.GONE);return true;}});
+   mp.setOnErrorListener(new MediaPlayer.OnErrorListener(){public boolean onError(MediaPlayer x,int a,int b){release();message(t("Bu ses telefonda çalınamıyor.\nAşağıdan MP3'e dönüştürebilirsin.","Ev deng li telefonê nayê lêdan.\nBi \"Veguherîne\" dikarî bikî MP3."),false);controls.setVisibility(View.GONE);return true;}});
    mp.prepareAsync();}catch(Exception e){release();message(t("Bu ses telefonda çalınamıyor.","Ev deng li telefonê nayê lêdan."),false);}}
  private boolean playing(){try{return video!=null?video.isPlaying():sound!=null&&sound.isPlaying();}catch(Exception e){return false;}}
  private int position(){try{return video!=null?video.getCurrentPosition():sound!=null?sound.getCurrentPosition():0;}catch(Exception e){return 0;}}
@@ -182,8 +187,45 @@ public class QuickView extends Activity {
  private void tick(){handler.removeCallbacks(ticker);handler.post(ticker);}
  private void tint(SeekBar s){s.setProgressTintList(android.content.res.ColorStateList.valueOf(ui.accent));s.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(ui.dark?0xFF55516A:0xFFB9B5C9));s.setThumbTintList(android.content.res.ColorStateList.valueOf(ui.accent));}
 
+ // ---------------------------------------------------------------- shortcuts: the format ring and the tools
+ /** Name the workspace uses for this kind of file. */
+ private String engineExt(){if(kind.equals("image"))return "image";if(kind.equals("pdf"))return "pdf";if(kind.equals("doc"))return ext;
+  if(kind.equals("text"))return Arrays.asList("srt","md","csv","tsv","rst").contains(ext)?ext:"txt";return ext;}
+ /** Sound and video need to know their tracks first (a video without sound offers no MP3). */
+ private void loadShortcuts(){final Uri u=uri;
+  if(kind.equals("other")){LinearLayout row=ui.row();row.setPadding(0,dp(14),0,0);row.addView(ui.button(t("Dönüştürücüde aç","Di Veguherînerê de veke"),"wand",0,new View.OnClickListener(){public void onClick(View v){toWorkspace(null,null);}}),new LinearLayout.LayoutParams(0,-2,1));
+   row.addView(roundButton("share",t("Paylaş","Parve bike"),new View.OnClickListener(){public void onClick(View v){share();}}));row.addView(roundButton("open",t("Başka uygulamayla aç","Bi sepaneke din veke"),new View.OnClickListener(){public void onClick(View v){openElsewhere();}}));shortcuts.addView(row);return;}
+  if(!kind.equals("video")&&!kind.equals("audio")){fillShortcuts(null);return;}
+  worker.execute(new Runnable(){public void run(){final MediaEngine.Info in=new MediaEngine.Info();android.media.MediaMetadataRetriever r=new android.media.MediaMetadataRetriever();
+   try{r.setDataSource(QuickView.this,u);in.video=kind.equals("video")&&!"no".equals(r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO));
+    String a=r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO);in.audio=a==null?!in.video:"yes".equals(a);}
+   catch(Exception e){in.video=kind.equals("video");in.audio=true;}finally{try{r.release();}catch(Exception ignored){}}
+   runOnUiThread(new Runnable(){public void run(){if(u==uri&&!isFinishing())fillShortcuts(in);}});}});}
+ private void fillShortcuts(MediaEngine.Info in){shortcuts.removeAllViews();String e=engineExt();
+  final String[] all=MainActivity.formatValues(in,e),front=MainActivity.frontFormats(in,e),back=Arrays.copyOfRange(all,front.length,all.length);
+  if(!Arrays.asList(all).contains(chosen))chosen=all[0];
+  LinearLayout card=ui.card();card.setGravity(Gravity.CENTER_HORIZONTAL);LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(-1,-2);cl.setMargins(0,dp(14),0,0);
+  TextView head=ui.label(t("Neye dönüştürülsün?","Bibe çi formatê?"),17,ui.text,true);head.setLayoutParams(new LinearLayout.LayoutParams(-1,-2));card.addView(head);
+  final Widgets.Donut d=new Widgets.Donut(this,ui);String src=in!=null?(in.video?t("video","vîdyo"):t("ses","deng")):kind.equals("image")?t("fotoğraf","wêne"):ext.toUpperCase(Locale.ROOT);
+  d.set(front,back,chosen,"1 "+src,"→ "+chosen);
+  d.listener=new Widgets.Donut.Listener(){public void chosen(String f){chosen=f;d.hint="→ "+f;d.invalidate();goButton.setText(t(f+" olarak dönüştür",f+" veguherîne"));}public void flipped(boolean b){}};
+  card.addView(d,new LinearLayout.LayoutParams(-1,-2));
+  if(back.length>0){TextView h=ui.small(t("Diğer biçimler için ortaya dokun.","Ji bo formatên din li navendê bitikîne."));h.setGravity(Gravity.CENTER);card.addView(h,new LinearLayout.LayoutParams(-1,-2));}
+  LinearLayout row=ui.row();row.setPadding(0,dp(12),0,0);
+  goButton=ui.button(t(chosen+" olarak dönüştür",chosen+" veguherîne"),"wand",0,new View.OnClickListener(){public void onClick(View v){toWorkspace("convert",chosen);}});row.addView(goButton,new LinearLayout.LayoutParams(0,-2,1));
+  row.addView(roundButton("share",t("Paylaş","Parve bike"),new View.OnClickListener(){public void onClick(View v){share();}}));
+  row.addView(roundButton("open",t("Başka uygulamayla aç","Bi sepaneke din veke"),new View.OnClickListener(){public void onClick(View v){openElsewhere();}}));
+  card.addView(row,new LinearLayout.LayoutParams(-1,-2));shortcuts.addView(card,cl);
+  List<String[]> acts=MainActivity.offeredActions(in,e);
+  if(acts.size()>1){shortcuts.addView(ui.section(t("Araçlar","Amûr")));Ui.Flow f=ui.flow();
+   for(final String[] a:acts){if(a[0].equals("convert"))continue;TextView c=ui.chip(ku?a[2]:a[1],false,new View.OnClickListener(){public void onClick(View v){toWorkspace(a[0],null);}});
+    c.setCompoundDrawablesRelative(ui.icon(a[3],ui.accentText,18),null,null,null);c.setCompoundDrawablePadding(dp(6));f.addView(c);}
+   shortcuts.addView(f);}
+  shortcuts.addView(ui.space(8));}
+
  // ---------------------------------------------------------------- actions
- private void toWorkspace(){try{Intent i=new Intent(this,MainActivity.class);i.setAction(Intent.ACTION_VIEW);i.setDataAndType(uri,mime.isEmpty()?"*/*":mime);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(i);finish();}
+ private void toWorkspace(String action,String format){try{Intent i=new Intent(this,MainActivity.class);i.setAction(Intent.ACTION_VIEW);i.setDataAndType(uri,mime.isEmpty()?"*/*":mime);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+   if(action!=null){i.putExtra("quick_action",action);if(format!=null)i.putExtra("quick_format",format);}startActivity(i);finish();}
   catch(Exception e){Toast.makeText(this,t("Açılamadı.","Venebû."),Toast.LENGTH_SHORT).show();}}
  private void share(){try{Intent i=new Intent(Intent.ACTION_SEND);i.setType(mime.isEmpty()?"*/*":mime);i.putExtra(Intent.EXTRA_STREAM,uri);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(Intent.createChooser(i,t("Paylaş","Parve bike")));}
   catch(Exception e){Toast.makeText(this,t("Paylaşılamadı.","Nehat parvekirin."),Toast.LENGTH_SHORT).show();}}

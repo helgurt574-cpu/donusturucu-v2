@@ -4,7 +4,7 @@ import java.io.*;import java.util.*;import java.util.zip.*;import org.json.*;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 
 public class MainActivity extends Activity {
- static final String VERSION="1.4.2";
+ static final String VERSION="1.4.3";
  static class ListedFile {File file;String name,ext;MediaEngine.Info info;File thumb;ListedFile(File f,String n,String e,MediaEngine.Info i){file=f;name=n;ext=e;info=i;}}
  /** Result of the preview button: a comparison, a short clip or sound, thumbnails or text. */
  static final class Preview {String action,kind,note,text;Bitmap before,after;File original,result;float[] peaksA,peaksB;List<Bitmap> thumbs=new ArrayList<Bitmap>();List<String> captions=new ArrayList<String>();boolean showResult=true;}
@@ -45,7 +45,16 @@ public class MainActivity extends Activity {
   try{if(Intent.ACTION_SEND.equals(a)){Uri u=in.getParcelableExtra(Intent.EXTRA_STREAM);if(u!=null)uris.add(u);}
    else if(Intent.ACTION_SEND_MULTIPLE.equals(a)){ArrayList<Uri> list=in.getParcelableArrayListExtra(Intent.EXTRA_STREAM);if(list!=null)uris.addAll(list);}
    else if(Intent.ACTION_VIEW.equals(a)&&in.getData()!=null)uris.add(in.getData());}catch(Exception ignored){}
-  if(!uris.isEmpty()){in.setAction(Intent.ACTION_MAIN);openImported=true;importMany(uris,null);}}
+  if(!uris.isEmpty()){quickAction=in.getStringExtra("quick_action");quickFormat=in.getStringExtra("quick_format");in.removeExtra("quick_action");in.removeExtra("quick_format");
+   in.setAction(Intent.ACTION_MAIN);openImported=true;importMany(uris,null);}}
+ /** A format or tool picked in the quick viewer: a format starts at once, a tool opens with its settings. */
+ private String quickAction,quickFormat;
+ private void applyQuick(){String a=quickAction,f=quickFormat;quickAction=null;quickFormat=null;if(a==null||source==null||busy)return;
+  if(a.equals("convert")){toolsTab=false;action="convert";if(f!=null&&Arrays.asList(formatValues(info,ext)).contains(f)){targetFormat=f;donutBack=!Arrays.asList(frontFormats(info,ext)).contains(f);build();startJob();}else build();return;}
+  for(String[] x:offeredActions(info,ext))if(x[0].equals(a)){toolsTab=true;chooseTool(a);return;}
+  build();}
+ private void chooseTool(String id){if(busy)return;action=id;preview=null;lastSummary=null;build();scroller.post(new Runnable(){public void run(){if(action.equals("watermark")&&(ext.equals("image")||(info!=null&&info.video))){scroller.smoothScrollTo(0,0);toast(t("Görüntüde filigranın üstünü çerçevele.","Li ser wêneyê nîşana avê çarçove bike."));return;}
+   if(info!=null&&TIMED.contains(action)){scroller.smoothScrollTo(0,0);toast(t("Oynatıcıyı istediğin yerde durdur, sonra “Başlangıç / Bitiş = bu an”a dokun.","Lîstikvanê li cihê xwestî rawestîne, paşê “Destpêk / Dawî = niha” bitikîne."));return;}View o=page.findViewWithTag("options");if(o!=null)scroller.smoothScrollTo(0,Math.max(0,o.getTop()-dp(12)));}});}
 
  // =====================================================================================
  // Screen
@@ -250,7 +259,7 @@ public class MainActivity extends Activity {
  /** last[0] keeps the position: Android drops the video when the screen is rebuilt, it comes back there. */
  private View player(File f,int w,int h,Bitmap poster,final boolean autoplay,final int[] last){
   LinearLayout wrap=ui.column();final FrameLayout box=new FrameLayout(this);box.setBackground(ui.round(0xFF000000,14,0));box.setClipToOutline(true);
-  int width=getResources().getDisplayMetrics().widthPixels-dp(56);int height=(int)Math.max(dp(160),Math.min(dp(420),(float)width*Math.max(1,h)/Math.max(1,w)));
+  int width=getResources().getDisplayMetrics().widthPixels-dp(56);int height=(int)Math.max(dp(200),Math.min(Math.max(dp(420),getResources().getDisplayMetrics().heightPixels*0.6f),(float)width*Math.max(1,h)/Math.max(1,w)));
   video=new VideoView(this);final VideoView v=video;box.addView(v,new FrameLayout.LayoutParams(-2,-2,Gravity.CENTER));
   final ImageView cover=new ImageView(this);cover.setScaleType(ImageView.ScaleType.FIT_CENTER);if(poster!=null&&!autoplay){cover.setImageBitmap(poster);box.addView(cover,new FrameLayout.LayoutParams(-1,-1));}
   wrap.addView(box,new LinearLayout.LayoutParams(-1,height));
@@ -332,8 +341,7 @@ public class MainActivity extends Activity {
    FrameLayout b=ui.badge(a[3],40,on?ui.accent:ui.accentSoft,on?ui.onAccent:ui.accentText);tile.addView(b);
    TextView l=ui.label(ku?a[2]:a[1],12.5f,on?ui.accentText:ui.text,on);l.setGravity(Gravity.CENTER);l.setPadding(0,dp(7),0,0);l.setMaxLines(2);tile.addView(l);
    if(NEW.contains(a[0])){TextView tag=ui.label(t("YENİ","NÛ"),9.5f,ui.onAccent,true);tag.setPadding(dp(6),dp(1),dp(6),dp(1));tag.setBackground(ui.round(ui.success,8,0));LinearLayout.LayoutParams tp=ui.margins(-2,-2,0,4,0,0);tile.addView(tag,tp);}
-   tile.setOnClickListener(new View.OnClickListener(){public void onClick(View v){if(busy)return;action=a[0];preview=null;lastSummary=null;build();scroller.post(new Runnable(){public void run(){if(action.equals("watermark")&&(ext.equals("image")||(info!=null&&info.video))){scroller.smoothScrollTo(0,0);toast(t("Görüntüde filigranın üstünü çerçevele.","Li ser wêneyê nîşana avê çarçove bike."));return;}
-   if(info!=null&&TIMED.contains(action)){scroller.smoothScrollTo(0,0);toast(t("Oynatıcıyı istediğin yerde durdur, sonra “Başlangıç / Bitiş = bu an”a dokun.","Lîstikvanê li cihê xwestî rawestîne, paşê “Destpêk / Dawî = niha” bitikîne."));return;}View o=page.findViewWithTag("options");if(o!=null)scroller.smoothScrollTo(0,Math.max(0,o.getTop()-dp(12)));}});}});
+   tile.setOnClickListener(new View.OnClickListener(){public void onClick(View v){chooseTool(a[0]);}});
    row.addView(tile,new LinearLayout.LayoutParams(0,-2,1));if(col%3!=2)row.addView(new View(this),new LinearLayout.LayoutParams(dp(8),1));col++;}
   while(row!=null&&col%3!=0){row.addView(new View(this),new LinearLayout.LayoutParams(0,1,1));if(col%3!=2)row.addView(new View(this),new LinearLayout.LayoutParams(dp(8),1));col++;}
   if(action.length()==0)grid.addView(note(t("Bir araç seç; ayarları burada açılır.","Amûrekê hilbijêre; mîheng li vir vedibin.")));
@@ -693,7 +701,7 @@ public class MainActivity extends Activity {
    catch(Exception error){if(!cancelled)failure(error);}
    final int skipped=failures;runOnUiThread(new Runnable(){public void run(){files.addAll(found);if(files.size()>1)batchEnabled=false;busy=false;
     lastStatus=t("Listeye eklendi: ","Li lîsteyê zêde bûn: ")+found.size()+(skipped>0?t(" · Atlanan / hatalı: "," · Derbaskirî / çewt: ")+skipped:"");homeNotice=skipped>0?lastStatus+"\n"+log.toString().trim():null;
-    boolean open=openImported;openImported=false;if(found.size()==1&&(open||files.size()==1))selectFile(files.size()-1);else go("home");}});}}).start();}
+    boolean open=openImported;openImported=false;if(found.size()==1&&(open||files.size()==1)){selectFile(files.size()-1);applyQuick();}else{quickAction=null;go("home");}}});}}).start();}
  /** Small picture for the file list and the history. */
  private File makeThumb(ListedFile f){try{File dir=new File(getCacheDir(),"thumbs");dir.mkdirs();File out=new File(dir,"t-"+System.nanoTime()+".jpg");Bitmap b=null;
    if(f.info!=null&&f.info.video){File s=lightEngine(dir).still(f.file,Math.min(1,f.info.duration*0.1),240,"s-"+System.nanoTime());b=BitmapFactory.decodeFile(s.getAbsolutePath());s.delete();}
