@@ -1,0 +1,74 @@
+name: macOS Intel paketi
+
+# Yayımlanmış Apple Silicon .pkg'den Intel Mac (x86_64) kurulum paketi üretir
+# (packaging/build_macos_intel.sh), gerçek bir Intel Mac'te kurar ve kurulumun öz-testini denetler.
+# Test geçerse paketi verilen etiketle yeni bir Release'e koyar.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_tag:
+        description: "Apple Silicon paketinin alınacağı Release"
+        required: true
+        default: "v1.9.2"
+      release_tag:
+        description: "Intel paketinin konacağı yeni Release etiketi (boş: yalnızca derle ve dene)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  intel:
+    runs-on: macos-15-intel
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Apple Silicon paketini indir
+        run: |
+          gh release download "${{ inputs.base_tag }}" --pattern "*Apple-Silicon*.pkg" --dir "$RUNNER_TEMP/base"
+          ls -la "$RUNNER_TEMP/base"
+
+      - name: Intel paketini oluştur
+        run: |
+          mkdir -p dist
+          packaging/build_macos_intel.sh "$RUNNER_TEMP"/base/*.pkg dist/Donusturucu-macOS-Intel-Kurulum.pkg
+          (cd dist && shasum -a 256 Donusturucu-macOS-Intel-Kurulum.pkg > Donusturucu-macOS-Intel-Kurulum.pkg.sha256)
+          rm -rf "$RUNNER_TEMP/intel" "$RUNNER_TEMP/base"
+          df -h .
+
+      - name: Kur ve öz-testi denetle
+        run: |
+          sudo installer -pkg dist/Donusturucu-macOS-Intel-Kurulum.pkg -target /
+          APP=/Applications/Donusturucu.app/Contents/Resources/app
+          cat "$APP/installation.log"
+          file "$APP/runtime/bin/python3"* | head -3
+          python3 - "$APP/installation-test.json" <<'PY'
+          import json,sys
+          r=json.load(open(sys.argv[1]))
+          print('makine:',r['machine'],'python:',r['python'])
+          failed=[c for c in r['checks'] if not c['ok']]
+          for c in r['checks']:print('PASS' if c['ok'] else 'FAIL',c['name'],c['seconds'],'s')
+          if r['machine']!='x86_64':sys.exit('x86_64 değil')
+          if failed:sys.exit(f'{len(failed)} test başarısız')
+          PY
+
+      - name: Uygulama penceresini başlat
+        run: |
+          APP=/Applications/Donusturucu.app/Contents/Resources/app
+          DONUSTURUCU_RUNTIME="$APP/runtime" "$APP/runtime/bin/python" -B "$APP/launch.py" --startup-test
+
+      - name: Release
+        if: inputs.release_tag != ''
+        run: |
+          gh release create "${{ inputs.release_tag }}" --target "$GITHUB_SHA" --latest=false \
+            --title "Dönüştürücü — macOS Intel" --notes-file .github/macos-intel-release-notes.md \
+            dist/Donusturucu-macOS-Intel-Kurulum.pkg dist/Donusturucu-macOS-Intel-Kurulum.pkg.sha256
